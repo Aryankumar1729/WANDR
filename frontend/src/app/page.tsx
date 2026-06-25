@@ -2,8 +2,10 @@
 
 import { useState, useRef, useEffect } from "react";
 import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
+import { useTripData } from "@/context/TripContext";
 
 export default function Home() {
+  const { setTripData } = useTripData();
   const [origin, setOrigin] = useState("Delhi");
   const [destination, setDestination] = useState("Mumbai");
   const [departureDate, setDepartureDate] = useState("2026-10-01");
@@ -37,6 +39,7 @@ export default function Home() {
     setItinerary(null);
     setBudgetResult(null);
     setMapMarkers([]);
+    setTripData({ origin, destination, departureDate, arrivalDate, adults: parseInt(adults), budget: parseFloat(budget) });
 
     const start = new Date(departureDate);
     const end = new Date(arrivalDate);
@@ -80,11 +83,21 @@ export default function Home() {
               setLogs((prev) => [...prev, data.event === "agent_running" ? `Running ${data.agent}...` : data.message || `Completed ${data.agent}`]);
               
               if (data.event === "agent_completed") {
-                if (data.agent === "WeatherAgent") setWeather(data.result.data);
-                if (data.agent === "FlightAgent") setFlights(data.result.data || []);
-                if (data.agent === "HotelAgent") setHotels(data.result.data || []);
+                if (data.agent === "WeatherAgent") {
+                  setWeather(data.result.data);
+                  setTripData({ weather: data.result.data });
+                }
+                if (data.agent === "FlightAgent") {
+                  setFlights(data.result.data || []);
+                  setTripData({ flights: data.result.data || [] });
+                }
+                if (data.agent === "HotelAgent") {
+                  setHotels(data.result.data || []);
+                  setTripData({ hotels: data.result.data || [] });
+                }
                 if (data.agent === "ItineraryAgent") {
                   setItinerary(data.result.data);
+                  setTripData({ itinerary: data.result.data });
                   
                   // Extract locations for map
                   const markers: any[] = [];
@@ -99,9 +112,13 @@ export default function Home() {
                   if (markers.length > 0) {
                     setMapCenter({ lat: markers[0].lat, lng: markers[0].lng });
                     setMapMarkers(markers);
+                    setTripData({ mapMarkers: markers, mapCenter: { lat: markers[0].lat, lng: markers[0].lng } });
                   }
                 }
-                if (data.agent === "BudgetAgent") setBudgetResult(data.result.data);
+                if (data.agent === "BudgetAgent") {
+                  setBudgetResult(data.result.data);
+                  setTripData({ budgetResult: data.result.data });
+                }
               }
             } catch (err) {
               console.error("Failed to parse SSE JSON", err);

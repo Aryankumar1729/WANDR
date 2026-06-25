@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     openweather_api_key: str = Field(default="", alias="OPENWEATHER_API_KEY")
     serpapi_api_key: str = Field(default="", alias="SERPAPI_API_KEY")
     duffel_api_key: str = Field(default="", alias="DUFFEL_API_KEY")
+    foursquare_api_key: str = Field(default="", alias="FOURSQUARE_API_KEY")
 
     # Server
     host: str = Field(default="0.0.0.0", alias="HOST")

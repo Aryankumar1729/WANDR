@@ -1,37 +1,64 @@
 "use client";
 
-import { useEffect } from "react";
+import { useTripData } from "@/context/TripContext";
 
 export default function BudgetPage() {
-  // Simple Donut animation on load
-  useEffect(() => {
-    const segments = document.querySelectorAll<SVGElement>(".donut-segment");
-    segments.forEach((segment) => {
-      // Need to cast to any or SVGGeometryElement to access getTotalLength
-      const length = (segment as any).getTotalLength?.() || 100;
-      segment.style.strokeDasharray = `${length}`;
-      segment.style.strokeDashoffset = `${length}`;
-      setTimeout(() => {
-        segment.style.strokeDashoffset = "0";
-      }, 100);
-    });
-  }, []);
+  const { tripData } = useTripData();
+  const { destination, departureDate, arrivalDate, adults, budget, budgetResult, flights, hotels } = tripData;
+
+  const hasData = budgetResult || flights.length > 0 || hotels.length > 0;
+
+  // Calculate budget breakdown from real data
+  const flightTotal = flights.reduce((sum: number, f: any) => {
+    const price = parseInt(String(f.price).replace(/[^\d]/g, "")) || 0;
+    return sum + price;
+  }, 0);
+
+  const hotelTotal = hotels.reduce((sum: number, h: any) => {
+    const price = parseInt(String(h.price).replace(/[^\d]/g, "")) || 0;
+    return sum + price;
+  }, 0);
+
+  const activityTotal = Math.round(budget * 0.1);
+  const foodTotal = Math.round(budget * 0.15);
+  const totalSpent = flightTotal + hotelTotal + activityTotal + foodTotal;
+  const remaining = budget - totalSpent;
+
+  const categories = [
+    { name: "Flights", amount: flightTotal, icon: "flight", color: "bg-secondary-container" },
+    { name: "Hotels", amount: hotelTotal, icon: "hotel", color: "bg-primary-container" },
+    { name: "Food", amount: foodTotal, icon: "restaurant", color: "bg-[#4ADE80]" },
+    { name: "Activities", amount: activityTotal, icon: "local_activity", color: "bg-tertiary-container" },
+  ];
+
+  const total = categories.reduce((s, c) => s + c.amount, 0) || 1;
+  const percentages = categories.map((c) => Math.round((c.amount / total) * 100));
+
+  if (!hasData) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center animate-fade-in gap-4 min-h-[60vh]">
+        <span className="material-symbols-outlined text-6xl text-outline">payments</span>
+        <h2 className="text-2xl font-bold text-on-surface">No Budget Data Yet</h2>
+        <p className="text-on-surface-variant text-sm max-w-md text-center">
+          Generate a trip from the <a href="/" className="text-primary font-bold hover:underline">Plan</a> page first. Your budget breakdown will appear here automatically.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-6xl mx-auto w-full space-y-8 animate-fade-in">
+    <div className="max-w-6xl mx-auto w-full space-y-8 animate-fade-in flex-1">
       {/* Page Header */}
       <div className="flex justify-between items-end">
         <div>
-          <h2 className="text-3xl font-bold text-on-surface">New Delhi Getaway</h2>
-          <p className="text-on-surface-variant text-sm mt-1">Oct 12 - Oct 15 • 3 Travelers</p>
+          <h2 className="text-3xl font-bold text-on-surface">{destination || "Your Trip"} Budget</h2>
+          <p className="text-on-surface-variant text-sm mt-1">
+            {departureDate && arrivalDate ? `${departureDate} — ${arrivalDate}` : "Trip dates"} • {adults} Traveler{adults > 1 ? "s" : ""}
+          </p>
         </div>
         <div className="flex gap-3">
           <button className="px-4 py-2 rounded-lg border border-outline-variant text-xs font-bold hover:bg-surface-container transition-colors">
             Export PDF
-          </button>
-          <button className="px-4 py-2 rounded-lg bg-primary text-on-primary text-xs font-bold flex items-center gap-2 hover:opacity-90">
-            <span className="material-symbols-outlined text-sm">download</span>
-            Reports
           </button>
         </div>
       </div>
@@ -39,204 +66,117 @@ export default function BudgetPage() {
       {/* Bento Grid Layout */}
       <div className="grid grid-cols-12 gap-6">
         {/* Budget Summary Card (Donut Chart) */}
-        <div className="col-span-12 lg:col-span-8 bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-surface-variant flex flex-col md:flex-row items-center gap-12">
+        <div className="col-span-12 lg:col-span-8 bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/30 flex flex-col md:flex-row items-center gap-12">
           <div className="relative w-48 h-48">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-              {/* Background Circle */}
-              <circle className="stroke-surface-container-high" cx="18" cy="18" fill="none" r="16" strokeWidth="3"></circle>
-              {/* Flights (Coral) - 40% */}
-              <circle className="stroke-secondary-container donut-segment transition-all duration-1000 ease-out" cx="18" cy="18" fill="none" r="16" strokeDasharray="40 100" strokeDashoffset="0" strokeWidth="4"></circle>
-              {/* Hotels (Teal) - 35% */}
-              <circle className="stroke-primary-container donut-segment transition-all duration-1000 ease-out" cx="18" cy="18" fill="none" r="16" strokeDasharray="35 100" strokeDashoffset="-40" strokeWidth="4"></circle>
-              {/* Food (Green) - 15% */}
-              <circle stroke="#4ADE80" className="donut-segment transition-all duration-1000 ease-out" cx="18" cy="18" fill="none" r="16" strokeDasharray="15 100" strokeDashoffset="-75" strokeWidth="4"></circle>
-              {/* Activities (Gold) - 10% */}
-              <circle className="stroke-tertiary-container donut-segment transition-all duration-1000 ease-out" cx="18" cy="18" fill="none" r="16" strokeDasharray="10 100" strokeDashoffset="-90" strokeWidth="4"></circle>
+              <circle className="stroke-surface-container-high" cx="18" cy="18" fill="none" r="16" strokeWidth="3" />
+              <circle className="stroke-secondary-container transition-all duration-1000 ease-out" cx="18" cy="18" fill="none" r="16" strokeDasharray={`${percentages[0]} 100`} strokeDashoffset="0" strokeWidth="4" />
+              <circle className="stroke-primary-container transition-all duration-1000 ease-out" cx="18" cy="18" fill="none" r="16" strokeDasharray={`${percentages[1]} 100`} strokeDashoffset={`${-percentages[0]}`} strokeWidth="4" />
+              <circle stroke="#4ADE80" className="transition-all duration-1000 ease-out" cx="18" cy="18" fill="none" r="16" strokeDasharray={`${percentages[2]} 100`} strokeDashoffset={`${-(percentages[0] + percentages[1])}`} strokeWidth="4" />
+              <circle className="stroke-tertiary-container transition-all duration-1000 ease-out" cx="18" cy="18" fill="none" r="16" strokeDasharray={`${percentages[3]} 100`} strokeDashoffset={`${-(percentages[0] + percentages[1] + percentages[2])}`} strokeWidth="4" />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
               <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Total</span>
-              <span className="text-2xl font-bold text-on-surface">₹42,500</span>
+              <span className="text-2xl font-bold text-on-surface">₹{totalSpent.toLocaleString()}</span>
             </div>
           </div>
           
           <div className="flex-1 grid grid-cols-2 gap-4 w-full">
-            <div className="p-4 rounded-lg bg-surface-container-low border border-surface-variant/50">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-3 h-3 rounded-full bg-secondary-container"></div>
-                <span className="text-xs font-bold text-on-surface-variant">Flights</span>
+            {categories.map((cat, i) => (
+              <div key={i} className="p-4 rounded-lg bg-surface-container-low border border-outline-variant/30">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className={`w-3 h-3 rounded-full ${cat.color}`} />
+                  <span className="text-xs font-bold text-on-surface-variant">{cat.name}</span>
+                </div>
+                <p className="text-xl font-bold text-on-surface">₹{cat.amount.toLocaleString()}</p>
               </div>
-              <p className="text-xl font-bold text-on-surface">₹17,000</p>
-            </div>
-            <div className="p-4 rounded-lg bg-surface-container-low border border-surface-variant/50">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-3 h-3 rounded-full bg-primary-container"></div>
-                <span className="text-xs font-bold text-on-surface-variant">Hotels</span>
-              </div>
-              <p className="text-xl font-bold text-on-surface">₹14,875</p>
-            </div>
-            <div className="p-4 rounded-lg bg-surface-container-low border border-surface-variant/50">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-3 h-3 rounded-full bg-[#4ADE80]"></div>
-                <span className="text-xs font-bold text-on-surface-variant">Food</span>
-              </div>
-              <p className="text-xl font-bold text-on-surface">₹6,375</p>
-            </div>
-            <div className="p-4 rounded-lg bg-surface-container-low border border-surface-variant/50">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-3 h-3 rounded-full bg-tertiary-container"></div>
-                <span className="text-xs font-bold text-on-surface-variant">Activities</span>
-              </div>
-              <p className="text-xl font-bold text-on-surface">₹4,250</p>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Optimization Side Section */}
+        {/* Budget Health */}
         <div className="col-span-12 lg:col-span-4 space-y-4">
-          <div className="bg-surface-container-lowest p-6 rounded-xl border border-surface-variant shadow-sm h-full">
-            <div className="flex items-center gap-2 mb-6">
-              <span className="material-symbols-outlined text-tertiary-container">auto_awesome</span>
-              <h3 className="text-xl font-bold">AI Suggestions</h3>
+          <div className={`p-6 rounded-xl border shadow-sm h-full flex flex-col justify-center gap-4 ${remaining >= 0 ? "bg-primary-container/20 border-primary-container" : "bg-red-50 border-red-300"}`}>
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-xl">{remaining >= 0 ? "check_circle" : "warning"}</span>
+              <h4 className="font-bold uppercase tracking-wider text-xs">{remaining >= 0 ? "Within Budget" : "Over Budget"}</h4>
             </div>
-            <div className="space-y-4">
-              {/* Suggestion 1 */}
-              <div className="p-4 rounded-xl bg-tertiary-fixed/30 border border-tertiary-fixed flex flex-col gap-3 group hover:bg-tertiary-fixed/50 transition-colors">
-                <div className="flex justify-between items-start">
-                  <p className="text-sm font-semibold text-on-tertiary-fixed-variant leading-tight">Swap Day 3 hotel (₹18k) → ₹8k boutique option</p>
-                  <span className="text-tertiary font-bold text-xs shrink-0">+₹10,000</span>
-                </div>
-                <button className="mt-2 w-full py-2 bg-on-tertiary-fixed text-white rounded-lg flex items-center justify-center gap-2 text-xs font-bold transition-all active:scale-95">
-                  <span className="material-symbols-outlined text-sm">check</span>
-                  Apply Optimization
-                </button>
-              </div>
-              {/* Suggestion 2 */}
-              <div className="p-4 rounded-xl bg-primary-fixed/20 border border-primary-fixed flex flex-col gap-3 group hover:bg-primary-fixed/40 transition-colors">
-                <div className="flex justify-between items-start">
-                  <p className="text-sm font-semibold text-on-primary-fixed-variant leading-tight">Reduce average food tier per meal</p>
-                  <span className="text-primary font-bold text-xs shrink-0">+₹1,500</span>
-                </div>
-                <button className="mt-2 w-full py-2 border border-primary text-primary rounded-lg flex items-center justify-center gap-2 text-xs font-bold transition-all active:scale-95">
-                  <span className="material-symbols-outlined text-sm">visibility</span>
-                  Review Menu
-                </button>
-              </div>
+            <div>
+              <p className="text-sm text-on-surface-variant">Your budget</p>
+              <p className="text-2xl font-bold text-on-surface">₹{budget.toLocaleString()}</p>
             </div>
+            <div>
+              <p className="text-sm text-on-surface-variant">{remaining >= 0 ? "Remaining" : "Exceeded by"}</p>
+              <p className={`text-2xl font-bold ${remaining >= 0 ? "text-primary" : "text-red-600"}`}>₹{Math.abs(remaining).toLocaleString()}</p>
+            </div>
+            {budgetResult?.suggestion && (
+              <p className="text-sm leading-relaxed font-semibold text-on-surface-variant border-t border-outline-variant/30 pt-3">{budgetResult.suggestion}</p>
+            )}
           </div>
         </div>
 
         {/* Cost Breakdown List */}
-        <div className="col-span-12 bg-surface-container-lowest rounded-xl border border-surface-variant shadow-sm overflow-hidden mt-4">
-          <div className="px-8 py-6 border-b border-surface-variant flex justify-between items-center bg-surface-container-low/50">
+        <div className="col-span-12 bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm overflow-hidden">
+          <div className="px-8 py-6 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low/50">
             <h3 className="text-xl font-bold">Detailed Breakdown</h3>
-            <div className="flex gap-4">
-              <select className="bg-transparent border-none text-xs font-bold focus:ring-0 cursor-pointer text-on-surface-variant">
-                <option>Group by Category</option>
-                <option>Group by Date</option>
-                <option>Sort by Cost</option>
-              </select>
-            </div>
           </div>
-          <div className="divide-y divide-surface-variant">
-            {/* Category: Flights */}
-            <div className="p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <span className="material-symbols-outlined text-secondary-container p-2 bg-secondary-fixed rounded-lg">flight</span>
-                <h4 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Flights</h4>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-xl hover:bg-surface-container transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded bg-surface-container-high flex items-center justify-center">
-                      <span className="material-symbols-outlined text-on-surface-variant">airplane_ticket</span>
+          <div className="divide-y divide-outline-variant/30">
+            {/* Flights */}
+            {flights.length > 0 && (
+              <div className="p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <span className="material-symbols-outlined text-secondary-container p-2 bg-secondary-fixed rounded-lg">flight</span>
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Flights</h4>
+                </div>
+                <div className="space-y-4">
+                  {flights.map((f: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between p-4 rounded-xl hover:bg-surface-container transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded bg-surface-container-high flex items-center justify-center">
+                          <span className="material-symbols-outlined text-on-surface-variant">airplane_ticket</span>
+                        </div>
+                        <div>
+                          <p className="text-base font-semibold">{f.airline}</p>
+                          <p className="text-xs text-on-surface-variant">{f.departure} → {f.arrival}</p>
+                        </div>
+                      </div>
+                      <p className="text-xl font-bold text-on-surface">{f.price}</p>
                     </div>
-                    <div>
-                      <p className="text-base font-semibold">IndiGo 6E-2134</p>
-                      <p className="text-xs text-on-surface-variant">New Delhi to Mumbai • Economy</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xl font-bold text-on-surface">₹5,400</p>
-                    <span className="text-[10px] uppercase font-bold text-primary px-2 py-0.5 rounded-full bg-primary-fixed/50">Confirmed</span>
-                  </div>
+                  ))}
                 </div>
               </div>
-            </div>
-            
-            {/* Category: Hotels */}
-            <div className="p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <span className="material-symbols-outlined text-primary-container p-2 bg-primary-fixed rounded-lg">hotel</span>
-                <h4 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Hotels</h4>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-xl hover:bg-surface-container transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded bg-surface-container-high flex items-center justify-center">
-                      <span className="material-symbols-outlined text-on-surface-variant">bed</span>
-                    </div>
-                    <div>
-                      <p className="text-base font-semibold">The Leela Palace</p>
-                      <p className="text-xs text-on-surface-variant">3 Nights • Royal Suite</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xl font-bold text-on-surface">₹54,600</p>
-                    <span className="text-[10px] uppercase font-bold text-secondary px-2 py-0.5 rounded-full bg-secondary-fixed/50">Overrun</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between p-4 rounded-xl hover:bg-surface-container transition-colors border-l-4 border-tertiary-container bg-tertiary-fixed/10">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded bg-surface-container-high flex items-center justify-center">
-                      <span className="material-symbols-outlined text-tertiary-container">lightbulb</span>
-                    </div>
-                    <div>
-                      <p className="text-base font-semibold">Alternative: Bloomrooms @ Link Road</p>
-                      <p className="text-xs text-on-surface-variant">3 Nights • Suggested Savings</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xl font-bold text-tertiary">₹12,500</p>
-                    <span className="text-[10px] uppercase font-bold text-tertiary px-2 py-0.5 rounded-full bg-tertiary-fixed">Potential Save</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            )}
 
-            {/* Category: Activities */}
-            <div className="p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <span className="material-symbols-outlined text-tertiary-container p-2 bg-tertiary-fixed rounded-lg">local_activity</span>
-                <h4 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Activities</h4>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-xl hover:bg-surface-container transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded bg-surface-container-high flex items-center justify-center">
-                      <span className="material-symbols-outlined text-on-surface-variant">museum</span>
+            {/* Hotels */}
+            {hotels.length > 0 && (
+              <div className="p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <span className="material-symbols-outlined text-primary-container p-2 bg-primary-fixed rounded-lg">hotel</span>
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Hotels</h4>
+                </div>
+                <div className="space-y-4">
+                  {hotels.map((h: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between p-4 rounded-xl hover:bg-surface-container transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded bg-surface-container-high flex items-center justify-center">
+                          <span className="material-symbols-outlined text-on-surface-variant">bed</span>
+                        </div>
+                        <div>
+                          <p className="text-base font-semibold">{h.name}</p>
+                          <p className="text-xs text-on-surface-variant">{h.price} / night</p>
+                        </div>
+                      </div>
+                      <div className="text-right flex items-center gap-1">
+                        <span className="material-symbols-outlined text-amber-500" style={{ fontSize: "14px" }}>star</span>
+                        <span className="text-sm font-bold">{h.rating || "New"}</span>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-base font-semibold">Humayun's Tomb Entrance</p>
-                      <p className="text-xs text-on-surface-variant">3 Tickets • Historical Site</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xl font-bold text-on-surface">₹1,800</p>
-                    <span className="text-[10px] uppercase font-bold text-primary px-2 py-0.5 rounded-full bg-primary-fixed/50">Confirmed</span>
-                  </div>
+                  ))}
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
-      </div>
-
-      {/* Floating Action Buttons */}
-      <div className="fixed bottom-8 right-8 flex flex-col items-end gap-3 z-50">
-        <button className="flex items-center gap-3 bg-white border-2 border-primary text-primary px-6 py-3 rounded-full shadow-lg font-bold group transition-all hover:scale-105 active:scale-95">
-          <span className="material-symbols-outlined">smart_toy</span>
-          Ask AI to balance budget
-        </button>
       </div>
     </div>
   );

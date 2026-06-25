@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Sidebar, Header } from "@/components/Navigation";
+import { TripProvider } from "@/context/TripContext";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,14 +20,17 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
       </head>
       <body className="text-on-surface antialiased bg-background" suppressHydrationWarning>
-        <Sidebar />
-        <Header />
+        <TripProvider>
+          <Sidebar />
+          <Header />
 
-        {/* Main Content */}
-        <main className="ml-64 pt-20 px-8 pb-12 flex gap-8 min-h-screen">
-          {children}
-        </main>
+          {/* Main Content */}
+          <main className="ml-64 pt-20 px-8 pb-12 flex gap-8 min-h-screen">
+            {children}
+          </main>
+        </TripProvider>
       </body>
     </html>
   );
 }
+

@@ -8,9 +8,9 @@ export function Sidebar() {
 
   const navLinks = [
     { name: "Plan", href: "/", icon: "explore" },
-    { name: "Flights", href: "#", icon: "flight" },
-    { name: "Hotels", href: "#", icon: "hotel" },
-    { name: "Itinerary", href: "#", icon: "event_note" },
+    { name: "Flights", href: "/flights", icon: "flight" },
+    { name: "Hotels", href: "/hotels", icon: "hotel" },
+    { name: "Itinerary", href: "/itinerary", icon: "event_note" },
     { name: "Budget", href: "/budget", icon: "payments" },
     { name: "Saved", href: "#", icon: "bookmark" },
   ];

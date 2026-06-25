@@ -21,4 +21,12 @@ for line in response.iter_lines():
                 print(f"Number of days generated: {len(days)}")
                 for d in days:
                     print(f"Day {d.get('day')} activities: {len(d.get('activities', []))}")
+                    for act in d.get("activities", []):
+                        print(f"  - {act.get('title')} ({act.get('type')})")
+                        if "place_details" in act:
+                            print(f"    Location: {act['place_details'].get('name')} | Photo: {act['place_details'].get('photo_url')}")
+                        if "travel_info" in act:
+                            print(f"    Travel: {act['travel_info'].get('distance')} in {act['travel_info'].get('duration')}")
+                        if "alternatives" in act:
+                            print(f"    Alternatives: {len(act['alternatives'])}")
                 break
