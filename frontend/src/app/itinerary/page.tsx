@@ -117,6 +117,9 @@ export default function ItineraryPage() {
           .map((day: any, filteredIdx: number) => {
             const dayNumber = day.day || filteredIdx + 1;
             const activities: any[] = day.activities || [];
+            
+            // Extract the specific forecast for this day
+            const dayWeather = tripData.weather?.forecast?.[dayNumber - 1];
 
             return (
               <div
@@ -129,12 +132,26 @@ export default function ItineraryPage() {
                   <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-primary-container flex items-center justify-center text-on-primary text-xl font-bold shadow-md shrink-0">
                     {dayNumber}
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-on-surface">
-                      Day {dayNumber}
-                    </h3>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-xl font-bold text-on-surface">
+                        Day {dayNumber}
+                      </h3>
+                      {dayWeather && (
+                        <div className="flex items-center gap-1.5 px-3 py-1 bg-surface-container-high rounded-full border border-outline-variant/30 shadow-sm">
+                          <img 
+                            src={`https://openweathermap.org/img/wn/${dayWeather.icon}.png`} 
+                            alt={dayWeather.condition} 
+                            className="w-6 h-6 brightness-95" 
+                          />
+                          <span className="text-xs font-bold text-on-surface">
+                            {dayWeather.temp}°C • {dayWeather.condition}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                     {day.date && (
-                      <p className="text-xs text-on-surface-variant">
+                      <p className="text-xs text-on-surface-variant mt-1">
                         {day.date}
                       </p>
                     )}
