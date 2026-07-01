@@ -2,9 +2,25 @@ import asyncio
 import logging
 import requests
 import urllib.parse
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger(__name__)
+
+# Curated fallback images by category (direct working Unsplash URLs)
+CATEGORY_FALLBACK_IMAGES = {
+    "restaurant": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=400&q=80",
+    "cafe": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=400&q=80",
+    "meal": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80",
+    "snack": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=400&q=80",
+    "museum": "https://images.unsplash.com/photo-1565060299509-2e82b3acde48?auto=format&fit=crop&w=400&q=80",
+    "temple": "https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=400&q=80",
+    "market": "https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?auto=format&fit=crop&w=400&q=80",
+    "park": "https://images.unsplash.com/photo-1585938389612-a552a28c9bc9?auto=format&fit=crop&w=400&q=80",
+    "hotel": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=400&q=80",
+    "beach": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80",
+    "monument": "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?auto=format&fit=crop&w=400&q=80",
+    "default": "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=400&q=80",
+}
 
 # Mapping from itinerary activity types to Overpass amenity/tourism tags
 CATEGORY_TO_OSM_TAGS = {
@@ -24,24 +40,6 @@ CATEGORY_TO_OSM_TAGS = {
     "viewpoint": '["tourism"="viewpoint"]',
 }
 
-# Photo keywords for different place types — used with Unsplash source
-CATEGORY_PHOTO_KEYWORDS = {
-    "restaurant": "indian+restaurant+food",
-    "cafe": "cafe+coffee+shop",
-    "meal": "indian+food+dish",
-    "snack": "street+food+india",
-    "museum": "museum+interior",
-    "temple": "indian+temple",
-    "market": "indian+market+bazaar",
-    "park": "park+garden+india",
-    "hotel": "hotel+room+luxury",
-    "bar": "bar+nightlife",
-    "beach": "beach+ocean+india",
-    "monument": "monument+historical+india",
-    "zoo": "zoo+animals",
-    "viewpoint": "scenic+viewpoint+mountain",
-}
-
 
 class PlacesProvider:
     """
@@ -54,7 +52,9 @@ class PlacesProvider:
     def __init__(self):
         self.nominatim_url = "https://nominatim.openstreetmap.org/search"
         self.overpass_url = "https://overpass-api.de/api/interpreter"
+        self.wikipedia_url = "https://en.wikipedia.org/api/rest_v1/page/summary"
         self.headers = {"User-Agent": "WandrTravelApp/1.0 (travel planner)"}
+        self._photo_cache: Dict[str, str] = {}  # Cache Wikipedia photo lookups
 
     # ── Main Search: Geocode a specific place by name ──────────────
 
@@ -94,10 +94,10 @@ class PlacesProvider:
                 importance = float(item.get("importance", 0.3))
                 rating = round(min(3.5 + importance * 3, 5.0), 1)
 
-                # Generate a contextual photo URL
-                photo_keyword = self._extract_photo_keyword(query)
-                # Use picsum or a deterministic placeholder with the place name
-                photo_url = f"https://source.unsplash.com/400x300/?{urllib.parse.quote(photo_keyword)}"
+                # Try to get a real photo from Wikipedia
+                photo_url = self._get_wikipedia_photo_sync(name)
+                if not photo_url:
+                    photo_url = self._get_category_fallback_image(query)
 
                 places.append({
                     "displayName": {"text": name},
@@ -154,8 +154,8 @@ class PlacesProvider:
                 address_parts = [p for p in [street, city, postcode] if p]
                 address = ", ".join(address_parts) if address_parts else "Nearby"
 
-                photo_keyword = CATEGORY_PHOTO_KEYWORDS.get(category.lower(), "travel+india")
-                photo_url = f"https://source.unsplash.com/400x300/?{urllib.parse.quote(photo_keyword)}"
+                # Try Wikipedia first, then category fallback
+                photo_url = self._get_wikipedia_photo_sync(name) or self._get_category_fallback_image(category)
 
                 places.append({
                     "displayName": {"text": name},
@@ -213,20 +213,94 @@ class PlacesProvider:
     def get_photo_url(self, photo_name: str, max_width: int = 400) -> str:
         """Return the photo URL directly (it's already a full URL now)."""
         if not photo_name or photo_name == "places/mocked":
-            return "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=400&q=80"
+            return CATEGORY_FALLBACK_IMAGES["default"]
         return photo_name
 
-    # ── Helpers ───────────────────────────────────────────────────
+    # ── Wikipedia Photo Fetcher ───────────────────────────────────
 
-    def _extract_photo_keyword(self, query: str) -> str:
-        """Extract a relevant photo keyword from the search query."""
-        query_lower = query.lower()
-        for category, keyword in CATEGORY_PHOTO_KEYWORDS.items():
-            if category in query_lower:
-                return keyword
-        # Default: use the query itself as the keyword
-        words = query.split()[:3]  # first 3 words
-        return "+".join(words)
+    def _get_wikipedia_photo_sync(self, place_name: str) -> Optional[str]:
+        """
+        Fetch a real photo from Wikipedia for the given place name.
+        Returns the thumbnail URL or None if not found.
+        Uses an in-memory cache to avoid repeated API calls.
+        """
+        if not place_name:
+            return None
+
+        # Check cache first
+        cache_key = place_name.lower().strip()
+        if cache_key in self._photo_cache:
+            return self._photo_cache[cache_key]
+
+        # Build a list of name variations to try
+        names_to_try = []
+
+        # 1. Strip non-ASCII suffixes (e.g. "Gateway of India - गेटवे ऑफ इंडिया" → "Gateway of India")
+        import re
+        ascii_only = re.sub(r'[^\x00-\x7F]+', '', place_name).strip().rstrip(' -').strip()
+        if ascii_only:
+            names_to_try.append(ascii_only)
+
+        # 2. Original name
+        names_to_try.append(place_name)
+
+        # 3. Before separator (handles "Name - Description" patterns)
+        if " - " in place_name:
+            names_to_try.append(place_name.split(" - ")[0].strip())
+
+        # 4. Strip city names from end
+        cities = ["Mumbai", "Delhi", "Jaipur", "Goa", "Pune", "Kolkata", "Chennai", "Bangalore", "Hyderabad",
+                  "Kochi", "Udaipur", "Agra", "Varanasi", "Shimla", "Manali", "Rishikesh"]
+        for city in cities:
+            for name in list(names_to_try):
+                stripped = name.replace(city, "").strip().rstrip(",").strip()
+                if stripped and stripped not in names_to_try and len(stripped) > 3:
+                    names_to_try.append(stripped)
+
+        # 5. Split on comma and try first part
+        if "," in place_name:
+            names_to_try.append(place_name.split(",")[0].strip())
+
+        # Deduplicate while preserving order
+        seen = set()
+        unique_names = []
+        for n in names_to_try:
+            if n.lower() not in seen and n:
+                seen.add(n.lower())
+                unique_names.append(n)
+
+        for name_variant in unique_names:
+            try:
+                wiki_title = name_variant.replace(" ", "_")
+                url = f"{self.wikipedia_url}/{urllib.parse.quote(wiki_title)}"
+                response = requests.get(url, headers=self.headers, timeout=5)
+
+                if response.status_code == 200:
+                    data = response.json()
+                    thumbnail = data.get("thumbnail", {})
+                    photo_url = thumbnail.get("source")
+                    if photo_url:
+                        # Upgrade to a larger size (replace /330px- with /600px-)
+                        photo_url = photo_url.replace("/330px-", "/600px-")
+                        self._photo_cache[cache_key] = photo_url
+                        return photo_url
+
+            except Exception as e:
+                logger.debug(f"Wikipedia photo lookup failed for '{name_variant}': {e}")
+                continue
+
+        self._photo_cache[cache_key] = None
+        return None
+
+    def _get_category_fallback_image(self, query_or_category: str) -> str:
+        """Return a curated, working fallback image URL based on place category."""
+        q = query_or_category.lower()
+        for category, url in CATEGORY_FALLBACK_IMAGES.items():
+            if category in q:
+                return url
+        return CATEGORY_FALLBACK_IMAGES["default"]
+
+    # ── Helpers ───────────────────────────────────────────────────
 
     def _fallback_places(self, query: str) -> List[Dict[str, Any]]:
         """
@@ -234,12 +308,13 @@ class PlacesProvider:
         using just the query text. This is NOT mock data — it's 
         a graceful degradation that still shows the place name.
         """
+        photo_url = self._get_wikipedia_photo_sync(query) or self._get_category_fallback_image(query)
         return [
             {
                 "displayName": {"text": query.replace("+", " ").title()},
                 "formattedAddress": "Address not available",
                 "rating": 4.0,
                 "location": {"latitude": 0, "longitude": 0},
-                "photos": [{"name": f"https://source.unsplash.com/400x300/?{urllib.parse.quote(self._extract_photo_keyword(query))}"}],
+                "photos": [{"name": photo_url}],
             }
         ]

@@ -126,7 +126,13 @@ class ItineraryAgent(ADKAgent):
                         }
                         photos = top_place.get("photos", [])
                         if photos:
-                            activity["place_details"]["photo_url"] = self.places_provider.get_photo_url(photos[0].get("name"))
+                            photo_url = self.places_provider.get_photo_url(photos[0].get("name"))
+                            # If fallback image was used, try Wikipedia with the original search query
+                            if "unsplash.com" in photo_url and query:
+                                wiki_photo = self.places_provider._get_wikipedia_photo_sync(query)
+                                if wiki_photo:
+                                    photo_url = wiki_photo
+                            activity["place_details"]["photo_url"] = photo_url
                         
                         curr_location = top_place.get("location")
                         if prev_location and curr_location:
