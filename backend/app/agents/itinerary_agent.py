@@ -18,9 +18,20 @@ class ItineraryAgent(ADKAgent):
         destination = payload.get("destination", "Mumbai")
 
         duration = payload.get("duration", 2)
-        weather_data = payload.get("weather", {}).get("data", {})
-        weather_condition = weather_data.get("condition", "Unknown")
-        temp = weather_data.get("temp", "Unknown")
+        weather_result = payload.get("weather", {})
+        weather_data = weather_result.get("data") or {}
+        forecast_list = weather_data.get("forecast", [])
+        
+        # Build day-by-day weather string
+        weather_context = ""
+        if forecast_list:
+            for i in range(min(duration, len(forecast_list))):
+                day_weather = forecast_list[i]
+                weather_context += f"Day {i+1} ({day_weather['date']}): {day_weather['condition']}, {day_weather['temp']}°C\n"
+        else:
+            weather_condition = weather_data.get("condition", "Unknown")
+            temp = weather_data.get("temp", "Unknown")
+            weather_context = f"All days: {weather_condition}, {temp}°C"
 
         if not self.gemini_client:
             return {"status": "error", "agent": self.name, "message": "GEMINI_API_KEY is missing", "data": {}}
@@ -41,9 +52,11 @@ class ItineraryAgent(ADKAgent):
         # Generate agentic itinerary via Gemini
         prompt = f"""
         You are a highly intelligent travel agent planning a {duration}-day itinerary for {destination}.
-        The current weather forecast is {weather_condition} with temperatures around {temp}°C. 
+        Here is the daily weather forecast for the trip:
+        {weather_context}
+        
         CRITICAL INSTRUCTIONS:
-        1. Adapt the plan to the weather: if it's raining or extremely hot, suggest indoor museums, cafes, or covered markets. If clear, suggest outdoor exploration, sunset walks, etc.
+        1. Adapt the plan to EACH DAY'S weather: if Day 2 is raining/hot, schedule indoor museums, cafes, or malls for Day 2. If Day 3 is clear, schedule outdoor beaches, hikes, or parks for Day 3. You MUST map activities to the specific daily forecast!
         2. Group activities logically by neighborhood to minimize travel distance and traffic time.
         3. Include specific recommendations for quick local snacks, street food, or highly-rated cafes between major sightseeing spots.
         4. ABSOLUTE REQUIREMENT: You MUST provide exactly {duration} days in the itinerary. The "days" array must have exactly {duration} elements, numbered 1 through {duration}.
