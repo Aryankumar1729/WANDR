@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
+import { GoogleMap, useJsApiLoader, Marker, Polyline } from "@react-google-maps/api";
 import { useTripData } from "@/context/TripContext";
 
 export default function Home() {
@@ -397,6 +397,17 @@ export default function Home() {
                 {mapMarkers.map((m, i) => (
                   <Marker key={i} position={{ lat: m.lat, lng: m.lng }} title={m.title} />
                 ))}
+                {mapMarkers.length > 1 && (
+                  <Polyline
+                    path={mapMarkers.map((m) => ({ lat: m.lat, lng: m.lng }))}
+                    options={{
+                      strokeColor: "#0ea5e9", // Tailwind primary color
+                      strokeOpacity: 0.8,
+                      strokeWeight: 4,
+                      geodesic: true,
+                    }}
+                  />
+                )}
               </GoogleMap>
             ) : (
               <div className="w-full h-full flex items-center justify-center text-outline text-sm font-bold">
