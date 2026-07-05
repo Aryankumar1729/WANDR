@@ -115,7 +115,7 @@ class LLMService:
                 model=self.model,
                 messages=messages,
                 temperature=0.8,
-                max_completion_tokens=2048,
+                max_tokens=2048,
             )
             return response.choices[0].message.content or ""
         except Exception as e:
@@ -138,7 +138,7 @@ class LLMService:
                 model=self.model,
                 messages=messages,
                 temperature=0.8,
-                max_completion_tokens=2048,
+                max_tokens=2048,
                 stream=True,
             )
             async for chunk in stream:
