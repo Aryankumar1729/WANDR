@@ -8,21 +8,20 @@ export function TopNav() {
 
   const navLinks = [
     { name: "My Trips", href: "/trips", icon: "luggage" },
-    { name: "Vacay", href: "/", icon: "event" },
-    { name: "Atlas", href: "#", icon: "public" },
-    { name: "Journey", href: "/itinerary", icon: "explore" }
+    { name: "Plan", href: "/", icon: "explore" },
+    { name: "Flights", href: "/flights", icon: "flight" },
+    { name: "Hotels", href: "/hotels", icon: "hotel" },
+    { name: "Itinerary", href: "/itinerary", icon: "event_note" }
   ];
 
   return (
     <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 z-50">
       {/* Logo */}
       <div className="flex items-center gap-2">
-        <div className="flex text-black font-black text-xl tracking-tighter items-center">
-          <svg className="w-5 h-5 mr-1" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M4 10h3v7H4zM10 10h4v7h-4zM17 10h3v7h-3zM4 6h16v3H4z" />
-          </svg>
-          trek
-        </div>
+        <Link href="/" className="flex text-black font-black text-xl tracking-widest items-center">
+          <span className="material-symbols-outlined text-primary mr-1" style={{ fontVariationSettings: "'FILL' 1" }}>public</span>
+          WANDR
+        </Link>
       </div>
 
       {/* Center Pill Nav */}

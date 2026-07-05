@@ -281,7 +281,7 @@ export default function MyTripsDashboard() {
       </div>
       
       {/* Floating New Trip Button */}
-      <div className="fixed bottom-8 right-8 z-50">
+      <div className="fixed bottom-8 right-32 z-50">
         <Link href="/" className="bg-[#1C1C1E] text-white px-6 py-4 rounded-full font-bold shadow-xl flex items-center gap-2 hover:bg-black transition-colors hover:scale-105 active:scale-95 duration-200">
           <span className="material-symbols-outlined text-[18px]">add</span>
           New Trip
