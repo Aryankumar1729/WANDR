@@ -15,7 +15,7 @@ export function TopNav() {
     { name: "Journey", href: "/itinerary", icon: "map" }
   ];
 
-  const isTripView = ["/itinerary", "/flights", "/hotels", "/budget"].includes(pathname);
+  const isTripView = ["/itinerary", "/flights", "/hotels", "/budget", "/lists"].includes(pathname);
 
   // When inside a trip view, render the specific trip header and subheader
   if (isTripView) {
@@ -23,6 +23,7 @@ export function TopNav() {
       { name: "Plan", href: "/itinerary", icon: "event_note" },
       { name: "Transports", href: "/flights", icon: "directions_car" },
       { name: "Book", href: "/hotels", icon: "hotel" },
+      { name: "Lists", href: "/lists", icon: "list_alt" },
       { name: "Costs", href: "/budget", icon: "payments" },
     ];
 
