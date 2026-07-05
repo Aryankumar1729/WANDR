@@ -26,7 +26,7 @@ export default function RootLayout({
           <TopNav />
 
           {/* Main Content */}
-          <main className="pt-24 px-8 pb-12 min-h-screen max-w-[1400px] mx-auto">
+          <main className="min-h-screen">
             {children}
           </main>
           

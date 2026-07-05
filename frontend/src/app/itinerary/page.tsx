@@ -22,7 +22,7 @@ export default function ItineraryPage() {
   const startDate = tripData.departureDate ? new Date(tripData.departureDate) : new Date();
 
   return (
-    <div className="flex h-[calc(100vh-104px)] w-full overflow-hidden bg-white -mx-8 -mt-24">
+    <div className="flex h-[calc(100vh-104px)] w-full overflow-hidden bg-white mt-[104px]">
       
       {/* Left Sidebar: Timeline */}
       <div className="w-[360px] bg-[#F8F9FA] flex flex-col border-r border-gray-200 shadow-[2px_0_10px_rgba(0,0,0,0.02)] z-10 relative">
@@ -145,7 +145,7 @@ export default function ItineraryPage() {
           style={{ border: 0 }}
           loading="lazy"
           allowFullScreen
-          src={`https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY_HERE&q=${encodeURIComponent(tripData.destination || "Tokyo")}`}
+          src={`https://maps.google.com/maps?q=${encodeURIComponent(tripData.destination || "Tokyo")}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
           className="grayscale opacity-80"
         ></iframe>
         

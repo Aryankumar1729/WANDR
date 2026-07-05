@@ -43,7 +43,7 @@ export default function MyTripsDashboard() {
   ];
 
   return (
-    <div className="flex flex-col gap-8 text-[#111827]">
+    <div className="flex flex-col gap-8 text-[#111827] pt-24 px-8 pb-12 max-w-[1400px] mx-auto">
       {/* Top Stats Row */}
       <div className="grid grid-cols-4 gap-6">
         <div className="bg-[#1C1C1E] text-white rounded-[24px] p-6 shadow-sm flex flex-col justify-between h-40">

@@ -37,7 +37,7 @@ export default function HotelsPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto w-full space-y-8 animate-fade-in">
+    <div className="max-w-5xl mx-auto w-full space-y-8 animate-fade-in pt-[136px] px-8 pb-12">
       {/* Page Header */}
       <div className="flex justify-between items-end">
         <div>

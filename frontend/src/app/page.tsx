@@ -174,7 +174,7 @@ export default function Home() {
   };
 
   return (
-    <div className="w-full flex flex-col xl:flex-row gap-8">
+    <div className="w-full flex flex-col xl:flex-row gap-8 pt-24 px-8 pb-12 max-w-[1400px] mx-auto">
       {/* Left Content Column */}
       <div className="flex-1 max-w-4xl flex flex-col gap-8">
         

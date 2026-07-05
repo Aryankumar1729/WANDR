@@ -17,7 +17,7 @@ export default function ListsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto w-full space-y-8 animate-fade-in pb-12 pt-8">
+    <div className="max-w-4xl mx-auto w-full space-y-8 animate-fade-in pb-12 pt-[136px] px-8">
       <div className="flex items-center gap-3 mb-8">
         <div className="w-12 h-12 bg-[#E67E22] rounded-full flex items-center justify-center shadow-md">
           <span className="material-symbols-outlined text-white text-[24px]">luggage</span>
