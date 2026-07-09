@@ -101,20 +101,17 @@ class ItineraryAgent(ADKAgent):
             )
 
         def _call_groq():
-            import requests
-            url = "https://api.groq.com/openai/v1/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {settings.groq_api_key}",
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "model": "llama-3.3-70b-versatile",
-                "messages": [{"role": "system", "content": "You are a JSON-only API. Output ONLY valid JSON without any markdown formatting, no backticks, no explanations. You MUST output ALL requested array items."}, {"role": "user", "content": prompt}],
-                "max_tokens": 6000
-            }
-            response = requests.post(url, json=payload, headers=headers)
-            response.raise_for_status()
-            return response.json()["choices"][0]["message"]["content"]
+            from groq import Groq
+            groq_client = Groq(api_key=settings.groq_api_key)
+            response = groq_client.chat.completions.create(
+                model="llama-3.1-70b-versatile",
+                messages=[
+                    {"role": "system", "content": "You are a JSON-only API. Output ONLY valid JSON without any markdown formatting, no backticks, no explanations. You MUST output ALL requested array items."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"}
+            )
+            return response.choices[0].message.content
         
         try:
             response_text = await loop.run_in_executor(None, _call_groq)
