@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 interface User {
   id: number;
@@ -24,6 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     setIsMounted(true);
@@ -35,6 +36,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(JSON.parse(storedUser));
     }
   }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    const publicRoutes = ["/", "/login", "/signup", "/register"];
+    const hasToken = localStorage.getItem("token") || token;
+    
+    if (!hasToken && !publicRoutes.includes(pathname)) {
+      router.push("/login");
+    }
+  }, [token, pathname, isMounted, router]);
 
   const login = (newToken: string, newUser: User) => {
     setToken(newToken);

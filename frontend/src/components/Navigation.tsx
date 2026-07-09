@@ -32,12 +32,14 @@ export function TopNav() {
     }
   };
 
-  const globalNavLinks = [
+  const globalNavLinks = isAuthenticated ? [
     { name: "My Trips", href: "/trips", icon: "luggage" },
     { name: "Time Off", href: "/vacation", icon: "event_available" },
     { name: "Plan", href: "/plan", icon: "explore" },
     { name: "Atlas", href: "/itinerary", icon: "public" },
     { name: "Journey", href: "/itinerary", icon: "map" }
+  ] : [
+    { name: "About", href: "/", icon: "info" }
   ];
 
   const isTripView = ["/itinerary", "/flights", "/hotels", "/budget", "/lists", "/logistics"].includes(pathname);
