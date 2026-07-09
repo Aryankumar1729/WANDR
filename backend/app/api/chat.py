@@ -80,7 +80,7 @@ async def chat_intake(request: ChatIntakeRequest):
             groq_prompt = f"{prompt}\n\nRETURN STRICTLY VALID JSON MATCHING THIS EXACT SCHEMA:\n{schema_str}"
             
             response = groq_client.chat.completions.create(
-                model='llama-3.1-70b-versatile',
+                model='llama-3.3-70b-versatile',
                 messages=[
                     {"role": "system", "content": "You are a JSON-only API. Output ONLY valid JSON."},
                     {"role": "user", "content": groq_prompt}

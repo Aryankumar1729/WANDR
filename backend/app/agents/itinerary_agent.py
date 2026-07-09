@@ -104,7 +104,7 @@ class ItineraryAgent(ADKAgent):
             from groq import Groq
             groq_client = Groq(api_key=settings.groq_api_key)
             response = groq_client.chat.completions.create(
-                model="llama-3.1-70b-versatile",
+                model="llama-3.3-70b-versatile",
                 messages=[
                     {"role": "system", "content": "You are a JSON-only API. Output ONLY valid JSON without any markdown formatting, no backticks, no explanations. You MUST output ALL requested array items."},
                     {"role": "user", "content": prompt}
