@@ -49,9 +49,12 @@ async def save_trip(trip: TripCreate, db: AsyncSession = Depends(get_db), curren
 
 @router.get("/")
 async def get_trips(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # Temporarily returning all trips to restore lost trips
+    # Fetch only trips where the current user is a member (either owner or invitee)
     result = await db.execute(
-        select(TripRecord).order_by(TripRecord.created_at.desc())
+        select(TripRecord)
+        .join(TripMember, TripRecord.id == TripMember.trip_id)
+        .where(TripMember.user_id == current_user.id)
+        .order_by(TripRecord.created_at.desc())
     )
     trips = result.scalars().all()
     return {"status": "success", "data": trips}
