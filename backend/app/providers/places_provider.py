@@ -70,6 +70,9 @@ class PlacesProvider:
                 "limit": 4,
                 "addressdetails": 1,
             }
+            import time
+            time.sleep(1.2)  # Respect Nominatim's strict 1 req/sec rate limit
+            
             response = requests.get(
                 self.nominatim_url,
                 params=params,
