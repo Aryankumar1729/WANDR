@@ -45,7 +45,7 @@ Output strictly in JSON matching the schema."""
 @router.post("/intake", response_model=IntakeData)
 async def chat_intake(request: ChatIntakeRequest):
     try:
-        client = Groq(api_key=settings.groq_api_key)
+        client = None
         
         # Construct history
         history_text = ""
@@ -53,15 +53,38 @@ async def chat_intake(request: ChatIntakeRequest):
             role = "User" if msg.role == "user" else "Wandr"
             history_text += f"{role}: {msg.content}\n"
         
-        prompt = f"{SYSTEM_PROMPT}\n\nConversation:\n{history_text}\n\nExtract the data and respond. RETURN STRICTLY VALID JSON."
-        
-        response = client.chat.completions.create(
-            model='llama-3.1-70b-versatile',
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"}
-        )
-        
-        data = json.loads(response.choices[0].message.content)
+        # 1. Try Gemini First
+        try:
+            from google import genai
+            from google.genai import types
+            
+            gemini_client = genai.Client(api_key=settings.gemini_api_key)
+            response = gemini_client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=IntakeData,
+                ),
+            )
+            data = json.loads(response.text)
+            
+        except Exception as gemini_err:
+            # 2. Fallback to Groq if Gemini hits quota/rate limits
+            from groq import Groq
+            groq_client = Groq(api_key=settings.groq_api_key)
+            
+            groq_prompt = f"{prompt}\n\nRETURN STRICTLY VALID JSON MATCHING THE SCHEMA."
+            
+            response = groq_client.chat.completions.create(
+                model='llama-3.1-70b-versatile',
+                messages=[
+                    {"role": "system", "content": "You are a JSON-only API. Output ONLY valid JSON."},
+                    {"role": "user", "content": groq_prompt}
+                ],
+                response_format={"type": "json_object"}
+            )
+            data = json.loads(response.choices[0].message.content)
         
         # Validation layer: Ensure if they say complete, it actually IS complete
         if data.get("is_complete"):

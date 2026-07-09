@@ -114,22 +114,23 @@ class ItineraryAgent(ADKAgent):
             return response.choices[0].message.content
         
         try:
-            response_text = await loop.run_in_executor(None, _call_groq)
-            # Strip markdown backticks if present
-            if response_text.startswith("```"):
-                response_text = response_text.split("```")[1]
-                if response_text.startswith("json"):
-                    response_text = response_text[4:]
-            response_text = response_text.strip()
+            # 1. Try Gemini First
+            response = await loop.run_in_executor(None, _call_gemini)
+            response_text = response.text
             itinerary_plan = json.loads(response_text)
-        except Exception as e:
-            # Fallback to Gemini
+        except Exception as gemini_err:
+            # 2. Fallback to Groq
             try:
-                response = await loop.run_in_executor(None, _call_gemini)
-                response_text = response.text
+                response_text = await loop.run_in_executor(None, _call_groq)
+                # Strip markdown backticks if present
+                if response_text.startswith("```"):
+                    response_text = response_text.split("```")[1]
+                    if response_text.startswith("json"):
+                        response_text = response_text[4:]
+                response_text = response_text.strip()
                 itinerary_plan = json.loads(response_text)
-            except Exception as gemini_err:
-                return {"status": "error", "agent": self.name, "message": f"Groq Error: {e} | Gemini Error: {gemini_err}", "data": {}}
+            except Exception as groq_err:
+                return {"status": "error", "agent": self.name, "message": f"Gemini Error: {gemini_err} | Groq Error: {groq_err}", "data": {}}
 
         # Enrich with real places data via Ola Maps
         for day in itinerary_plan.get("days", []):
