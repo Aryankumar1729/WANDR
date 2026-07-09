@@ -2,17 +2,80 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import toast from "react-hot-toast";
 
 export default function SignupPage() {
+  const [step, setStep] = useState<"details" | "otp">("details");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Signup submitted", { fullName, email, password, confirmPassword });
-    // TODO: Implement actual signup logic
+    
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: fullName, email, password }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.detail || "Registration failed");
+      }
+      
+      toast.success("OTP sent to your email!");
+      setStep("otp");
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otp.length !== 6) {
+      toast.error("Please enter a valid 6-digit OTP");
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.detail || "Invalid OTP");
+      }
+      
+      login(data.access_token, data.user);
+      toast.success("Email verified! Account created.");
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -29,98 +92,140 @@ export default function SignupPage() {
           {/* Logo Area */}
           <div className="flex flex-col items-center mb-10">
             <div className="mb-6 flex items-center justify-center">
-              <img src="/assets/logo.png" alt="WANDR Logo" className="h-24 w-auto object-contain" />
+              <img src="/assets/logo.png" alt="WANDR Logo" className="h-48 w-auto object-contain" />
             </div>
             <p className="font-body-md text-body-md text-on-surface-variant mt-2">Start your journey.</p>
           </div>
 
-          {/* Signup Form */}
-          <form className="space-y-5" onSubmit={handleSignup}>
-            {/* Full Name Field */}
-            <div className="space-y-2">
-              <label className="font-label-md text-label-md text-on-surface-variant ml-1" htmlFor="fullName">
-                Full Name
-              </label>
-              <div className="relative group">
-                <input
-                  className="w-full h-12 bg-surface-container-low border-transparent border focus:border-outline focus:bg-surface-container-lowest focus:ring-0 rounded-lg px-4 font-body-md text-body-md text-on-surface transition-all placeholder:text-on-secondary-container/50 focus-within:scale-[1.01]"
-                  id="fullName"
-                  placeholder="e.g. John Doe"
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                />
+          {step === "details" ? (
+            <form className="space-y-5" onSubmit={handleSignup}>
+              {/* Full Name Field */}
+              <div className="space-y-2">
+                <label className="font-label-md text-label-md text-on-surface-variant ml-1" htmlFor="fullName">
+                  Full Name
+                </label>
+                <div className="relative group">
+                  <input
+                    className="w-full h-12 bg-surface-container-low border-transparent border focus:border-outline focus:bg-surface-container-lowest focus:ring-0 rounded-lg px-4 font-body-md text-body-md text-on-surface transition-all placeholder:text-on-secondary-container/50 focus-within:scale-[1.01]"
+                    id="fullName"
+                    placeholder="e.g. John Doe"
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Email Field */}
-            <div className="space-y-2">
-              <label className="font-label-md text-label-md text-on-surface-variant ml-1" htmlFor="email">
-                Email Address
-              </label>
-              <div className="relative group">
-                <input
-                  className="w-full h-12 bg-surface-container-low border-transparent border focus:border-outline focus:bg-surface-container-lowest focus:ring-0 rounded-lg px-4 font-body-md text-body-md text-on-surface transition-all placeholder:text-on-secondary-container/50 focus-within:scale-[1.01]"
-                  id="email"
-                  placeholder="e.g. wanderer@explore.com"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+              {/* Email Field */}
+              <div className="space-y-2">
+                <label className="font-label-md text-label-md text-on-surface-variant ml-1" htmlFor="email">
+                  Email Address
+                </label>
+                <div className="relative group">
+                  <input
+                    className="w-full h-12 bg-surface-container-low border-transparent border focus:border-outline focus:bg-surface-container-lowest focus:ring-0 rounded-lg px-4 font-body-md text-body-md text-on-surface transition-all placeholder:text-on-secondary-container/50 focus-within:scale-[1.01]"
+                    id="email"
+                    placeholder="e.g. wanderer@explore.com"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Password Field */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center px-1">
-                <label className="font-label-md text-label-md text-on-surface-variant" htmlFor="password">
+              {/* Password Field */}
+              <div className="space-y-2">
+                <label className="font-label-md text-label-md text-on-surface-variant ml-1" htmlFor="password">
                   Password
                 </label>
+                <div className="relative group">
+                  <input
+                    className="w-full h-12 bg-surface-container-low border-transparent border focus:border-outline focus:bg-surface-container-lowest focus:ring-0 rounded-lg px-4 font-body-md text-body-md text-on-surface transition-all placeholder:text-on-secondary-container/50 focus-within:scale-[1.01]"
+                    id="password"
+                    placeholder="••••••••"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <p className="text-[11px] text-on-surface-variant italic ml-1 mt-1">Must be at least 8 characters long.</p>
               </div>
-              <div className="relative group">
-                <input
-                  className="w-full h-12 bg-surface-container-low border-transparent border focus:border-outline focus:bg-surface-container-lowest focus:ring-0 rounded-lg px-4 font-body-md text-body-md text-on-surface transition-all placeholder:text-on-secondary-container/50 focus-within:scale-[1.01]"
-                  id="password"
-                  placeholder="••••••••"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <p className="text-[11px] text-on-surface-variant italic ml-1 mt-1">Must be at least 8 characters long.</p>
-            </div>
 
-            {/* Confirm Password Field */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center px-1">
-                <label className="font-label-md text-label-md text-on-surface-variant" htmlFor="confirmPassword">
+              {/* Confirm Password Field */}
+              <div className="space-y-2">
+                <label className="font-label-md text-label-md text-on-surface-variant ml-1" htmlFor="confirmPassword">
                   Confirm Password
                 </label>
+                <div className="relative group">
+                  <input
+                    className="w-full h-12 bg-surface-container-low border-transparent border focus:border-outline focus:bg-surface-container-lowest focus:ring-0 rounded-lg px-4 font-body-md text-body-md text-on-surface transition-all placeholder:text-on-secondary-container/50 focus-within:scale-[1.01]"
+                    id="confirmPassword"
+                    placeholder="••••••••"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
-              <div className="relative group">
-                <input
-                  className="w-full h-12 bg-surface-container-low border-transparent border focus:border-outline focus:bg-surface-container-lowest focus:ring-0 rounded-lg px-4 font-body-md text-body-md text-on-surface transition-all placeholder:text-on-secondary-container/50 focus-within:scale-[1.01]"
-                  id="confirmPassword"
-                  placeholder="••••••••"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
 
-            {/* Primary Action */}
-            <button
-              className="w-full h-12 bg-primary text-on-primary rounded-full font-body-lg text-body-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4"
-              type="submit"
-            >
-              Create Account
-            </button>
-          </form>
+              <button
+                className="w-full h-12 bg-primary text-on-primary rounded-full font-body-lg text-body-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
+                type="submit"
+                disabled={loading}
+              >
+                {loading ? "Sending OTP..." : "Continue"}
+              </button>
+            </form>
+          ) : (
+            <form className="space-y-5 animate-fade-in" onSubmit={handleVerifyOtp}>
+              <div className="text-center mb-4">
+                <h3 className="font-title-lg text-title-lg text-on-surface">Verify your email</h3>
+                <p className="font-body-md text-body-md text-on-surface-variant mt-2">
+                  We've sent a 6-digit code to <strong>{email}</strong>
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="font-label-md text-label-md text-on-surface-variant ml-1" htmlFor="otp">
+                  Enter 6-Digit OTP
+                </label>
+                <div className="relative group">
+                  <input
+                    className="w-full h-12 bg-surface-container-low border-transparent border focus:border-outline focus:bg-surface-container-lowest focus:ring-0 rounded-lg px-4 font-body-md text-body-md text-on-surface transition-all text-center tracking-widest text-lg placeholder:text-on-secondary-container/50"
+                    id="otp"
+                    placeholder="------"
+                    type="text"
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
+                    required
+                  />
+                </div>
+              </div>
+
+              <button
+                className="w-full h-12 bg-primary text-on-primary rounded-full font-body-lg text-body-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
+                type="submit"
+                disabled={loading || otp.length !== 6}
+              >
+                {loading ? "Verifying..." : "Verify & Create Account"}
+              </button>
+              
+              <div className="text-center mt-4">
+                <button
+                  type="button"
+                  className="font-label-md text-label-md text-secondary hover:text-primary transition-colors"
+                  onClick={() => setStep("details")}
+                >
+                  Edit email or resend code
+                </button>
+              </div>
+            </form>
+          )}
 
           {/* Divider */}
           <div className="relative my-8">

@@ -1,13 +1,70 @@
 "use client";
 
 import { useTripData } from "@/context/TripContext";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
 export default function HotelsPage() {
   const { tripData } = useTripData();
   const hotels = tripData.hotels || [];
   const [selectedHotel, setSelectedHotel] = useState<number | null>(null);
+  const [sortMode, setSortMode] = useState<"price-asc" | "price-desc" | "rating-desc">("price-asc");
+  const [favorites, setFavorites] = useState<number[]>([]);
+
+  const visibleHotels = useMemo(() => {
+    const parsePrice = (price: any) => {
+      if (typeof price === "number") return price;
+      const normalized = String(price ?? "")
+        .replace(/,/g, "")
+        .replace(/[^0-9.]/g, "");
+      const parsed = Number(normalized);
+      return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
+    };
+
+    const parseRating = (rating: any) => {
+      const parsed = Number(rating);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    const current = [...hotels];
+    current.sort((left: any, right: any) => {
+      if (sortMode === "rating-desc") {
+        return parseRating(right.rating) - parseRating(left.rating);
+      }
+
+      const leftPrice = parsePrice(left.price);
+      const rightPrice = parsePrice(right.price);
+      return sortMode === "price-asc"
+        ? leftPrice - rightPrice
+        : rightPrice - leftPrice;
+    });
+    return current;
+  }, [hotels, sortMode]);
+
+  const toggleFavorite = (index: number) => {
+    setFavorites((current) =>
+      current.includes(index)
+        ? current.filter((item) => item !== index)
+        : [...current, index],
+    );
+  };
+
+  const openHotelDetails = (hotel: any) => {
+    const url =
+      hotel.website ||
+      hotel.maps_uri ||
+      `https://www.google.com/travel/hotels?q=${encodeURIComponent(hotel.name || tripData.destination || "hotel")}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const openMapSearch = () => {
+    const destination = tripData.destination || "hotel";
+    window.open(
+      `https://www.google.com/maps/search/${encodeURIComponent(destination)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
 
   if (hotels.length === 0) {
     return (
@@ -51,26 +108,42 @@ export default function HotelsPage() {
         <div className="flex gap-3">
           <button 
             className="px-4 py-2 rounded-lg border border-outline-variant text-xs font-bold hover:bg-surface-container transition-colors flex items-center gap-2"
-            onClick={() => toast("Sorting coming soon!", { icon: "↕️" })}
+            onClick={() =>
+              setSortMode((current) =>
+                current === "price-asc"
+                  ? "price-desc"
+                  : current === "price-desc"
+                    ? "rating-desc"
+                    : "price-asc",
+              )
+            }
           >
             <span className="material-symbols-outlined text-sm">sort</span>
-            Sort
+            {sortMode === "price-asc"
+              ? "Sort: Price ↑"
+              : sortMode === "price-desc"
+                ? "Sort: Price ↓"
+                : "Sort: Rating"}
           </button>
           <button 
             className="px-4 py-2 rounded-lg border border-outline-variant text-xs font-bold hover:bg-surface-container transition-colors flex items-center gap-2"
-            onClick={() => toast("Filtering coming soon!", { icon: "🔍" })}
+            onClick={() => setFavorites((current) => (current.length ? [] : visibleHotels.map((_, index) => index)))}
           >
             <span className="material-symbols-outlined text-sm">
               filter_list
             </span>
-            Filter
+            {favorites.length ? "Show All" : "Favorites"}
           </button>
         </div>
       </div>
 
       {/* Hotels Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {hotels.map((hotel: any, index: number) => {
+        {visibleHotels
+          .filter((hotel: any, index: number) =>
+            favorites.length ? favorites.includes(index) : true,
+          )
+          .map((hotel: any, index: number) => {
           const isSelected = selectedHotel === index;
           const rating =
             typeof hotel.rating === "string"
@@ -81,7 +154,7 @@ export default function HotelsPage() {
           return (
             <div
               key={index}
-              className={`animate-slide-up bg-surface-container-lowest rounded-2xl border overflow-hidden shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group ${
+              className={`animate-slide-up bg-surface-container-lowest rounded-[24px] border overflow-hidden shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group ${
                 isSelected
                   ? "border-primary ring-2 ring-primary/20"
                   : "border-outline-variant/50"
@@ -118,9 +191,15 @@ export default function HotelsPage() {
                   </div>
                 )}
                 {/* Favorite Button */}
-                <button className="absolute top-3 left-3 w-9 h-9 rounded-full bg-surface-container-lowest/80 backdrop-blur-sm flex items-center justify-center border border-outline-variant/30 shadow-md transition-all hover:scale-110 active:scale-95">
+                <button
+                  className="absolute top-3 left-3 w-9 h-9 rounded-full bg-surface-container-lowest/80 backdrop-blur-sm flex items-center justify-center border border-outline-variant/30 shadow-md transition-all hover:scale-110 active:scale-95"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFavorite(index);
+                  }}
+                >
                   <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-                    favorite
+                    {favorites.includes(index) ? "favorite" : "favorite_border"}
                   </span>
                 </button>
               </div>
@@ -198,7 +277,7 @@ export default function HotelsPage() {
                   className="w-full mt-4 bg-primary text-on-primary py-2.5 rounded-lg text-sm font-bold shadow-sm hover:opacity-90 transition-all active:scale-95"
                   onClick={(e) => {
                     e.stopPropagation();
-                    import("react-hot-toast").then(mod => mod.default.success("Redirecting to booking partner..."));
+                    openHotelDetails(hotel);
                   }}
                 >
                   View Details
@@ -219,7 +298,10 @@ export default function HotelsPage() {
             Prices are per night and may vary based on availability and season.
           </p>
         </div>
-        <button className="text-xs font-bold text-primary hover:underline">
+        <button
+          className="text-xs font-bold text-primary hover:underline"
+          onClick={openMapSearch}
+        >
           View on map
         </button>
       </div>

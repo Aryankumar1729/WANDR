@@ -1,13 +1,49 @@
 "use client";
 
 import { useTripData } from "@/context/TripContext";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
 export default function FlightsPage() {
   const { tripData } = useTripData();
   const flights = tripData.flights || [];
   const [selectedFlight, setSelectedFlight] = useState<number | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [directOnly, setDirectOnly] = useState(false);
+
+  const visibleFlights = useMemo(() => {
+    const parsePrice = (price: any) => {
+      if (typeof price === "number") return price;
+      const normalized = String(price ?? "")
+        .replace(/,/g, "")
+        .replace(/[^0-9.]/g, "");
+      const parsed = Number(normalized);
+      return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
+    };
+
+    const filtered = flights.filter((flight: any) =>
+      directOnly ? Number(flight.stops || 0) === 0 : true,
+    );
+
+    return [...filtered].sort((left: any, right: any) => {
+      const leftPrice = parsePrice(left.price);
+      const rightPrice = parsePrice(right.price);
+      return sortDirection === "asc"
+        ? leftPrice - rightPrice
+        : rightPrice - leftPrice;
+    });
+  }, [directOnly, flights, sortDirection]);
+
+  const openBookingSearch = (flight: any) => {
+    const queryParts = [tripData.origin, tripData.destination, tripData.departureDate]
+      .filter(Boolean)
+      .join(" ");
+    const url =
+      flight.booking_url ||
+      flight.website ||
+      `https://www.google.com/travel/flights?q=${encodeURIComponent(queryParts)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   if (flights.length === 0) {
     return (
@@ -51,26 +87,26 @@ export default function FlightsPage() {
         <div className="flex gap-3">
           <button 
             className="px-4 py-2 rounded-lg border border-outline-variant text-xs font-bold hover:bg-surface-container transition-colors flex items-center gap-2"
-            onClick={() => toast("Sorting coming soon!", { icon: "↕️" })}
+            onClick={() => setSortDirection((current) => (current === "asc" ? "desc" : "asc"))}
           >
             <span className="material-symbols-outlined text-sm">sort</span>
-            Sort by Price
+            Sort by Price {sortDirection === "asc" ? "↑" : "↓"}
           </button>
           <button 
             className="px-4 py-2 rounded-lg border border-outline-variant text-xs font-bold hover:bg-surface-container transition-colors flex items-center gap-2"
-            onClick={() => toast("Filtering coming soon!", { icon: "🔍" })}
+            onClick={() => setDirectOnly((current) => !current)}
           >
             <span className="material-symbols-outlined text-sm">
               filter_list
             </span>
-            Filter
+            {directOnly ? "Direct Only" : "Filter"}
           </button>
         </div>
       </div>
 
       {/* Flight Cards */}
       <div className="space-y-4">
-        {flights.map((flight: any, index: number) => {
+        {visibleFlights.map((flight: any, index: number) => {
           const isSelected = selectedFlight === index;
           const departureTime = flight.departure
             ? new Date(flight.departure).toLocaleTimeString([], {
@@ -101,7 +137,7 @@ export default function FlightsPage() {
             <div
               key={index}
               onClick={() => setSelectedFlight(isSelected ? null : index)}
-              className={`animate-slide-up bg-surface-container-lowest rounded-2xl border shadow-sm overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 ${
+              className={`animate-slide-up bg-surface-container-lowest rounded-[24px] border shadow-sm overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 ${
                 isSelected
                   ? "border-primary ring-2 ring-primary/20"
                   : "border-outline-variant/50"
@@ -186,7 +222,7 @@ export default function FlightsPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        toast.success("Redirecting to booking partner...");
+                        openBookingSearch(flight);
                       }}
                       className="mt-1 px-5 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold flex items-center gap-2 transition-all hover:opacity-90 active:scale-95"
                     >
@@ -245,7 +281,15 @@ export default function FlightsPage() {
             Prices are indicative and may change. Book early for the best deals.
           </p>
         </div>
-        <button className="text-xs font-bold text-primary hover:underline">
+        <button
+          className="text-xs font-bold text-primary hover:underline"
+          onClick={() => {
+            if (visibleFlights.length > 0) {
+              setSelectedFlight(0);
+              openBookingSearch(visibleFlights[0]);
+            }
+          }}
+        >
           Compare all
         </button>
       </div>

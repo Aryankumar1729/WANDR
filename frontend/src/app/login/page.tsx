@@ -2,15 +2,41 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import toast from "react-hot-toast";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login submitted", { email, password });
-    // TODO: Implement actual login logic
+    setLoading(true);
+    
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.detail || "Login failed");
+      }
+      
+      login(data.access_token, data.user);
+      toast.success("Welcome back!");
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -27,7 +53,7 @@ export default function LoginPage() {
           {/* Logo Area */}
           <div className="flex flex-col items-center mb-10">
             <div className="mb-6 flex items-center justify-center">
-              <img src="/assets/logo.png" alt="WANDR Logo" className="h-24 w-auto object-contain" />
+              <img src="/assets/logo.png" alt="WANDR Logo" className="h-48 w-auto object-contain" />
             </div>
             <p className="font-body-md text-body-md text-on-surface-variant mt-2">Welcome back, traveler.</p>
           </div>
@@ -77,10 +103,11 @@ export default function LoginPage() {
 
             {/* Primary Action */}
             <button
-              className="w-full h-12 bg-primary text-on-primary rounded-full font-body-lg text-body-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4"
+              className="w-full h-12 bg-primary text-on-primary rounded-full font-body-lg text-body-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
               type="submit"
+              disabled={loading}
             >
-              Sign In
+              {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 

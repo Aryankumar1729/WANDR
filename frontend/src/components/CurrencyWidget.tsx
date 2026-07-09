@@ -46,7 +46,7 @@ export default function CurrencyWidget() {
   };
 
   return (
-    <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
+    <div className="bg-white rounded-[24px] p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 border border-gray-100">
       <div className="flex justify-between items-center mb-6 text-gray-500 text-xs font-bold tracking-widest">
         <div className="flex items-center gap-2">
           <span className="material-symbols-outlined text-[16px]">currency_exchange</span>
@@ -56,7 +56,7 @@ export default function CurrencyWidget() {
       </div>
 
       <div className="flex items-center gap-3 relative">
-        <div className="flex-1 bg-[#F9F9F9] rounded-2xl p-4 border border-gray-100">
+        <div className="flex-1 bg-[#F9F9F9] rounded-[24px] p-4 border border-gray-100">
           <p className="text-[10px] font-bold text-gray-400 tracking-widest mb-1">FROM</p>
           <input 
             type="number"
@@ -76,7 +76,7 @@ export default function CurrencyWidget() {
           <span className="material-symbols-outlined text-[14px]">swap_horiz</span>
         </div>
 
-        <div className="flex-1 bg-[#F9F9F9] rounded-2xl p-4 border border-gray-100">
+        <div className="flex-1 bg-[#F9F9F9] rounded-[24px] p-4 border border-gray-100">
           <p className="text-[10px] font-bold text-gray-400 tracking-widest mb-1">TO</p>
           <p className="text-3xl font-bold text-gray-900 mb-2 overflow-hidden text-ellipsis">
             {loading ? "..." : (result ? result.toFixed(2) : "0.00")}

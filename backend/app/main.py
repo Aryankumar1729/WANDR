@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.config import settings
-from app.api import chat, destinations, itinerary, weather, health, logistics, orchestration, trips, explore
+from app.api import chat, destinations, itinerary, weather, health, logistics, orchestration, trips, explore, maps, auth, users, vacay
 from app.db.database import engine, Base
 
 @asynccontextmanager
@@ -37,6 +37,8 @@ app.add_middleware(
 )
 
 # Routes
+app.include_router(auth.router, prefix="/api", tags=["auth"])
+app.include_router(users.router, prefix="/api/users", tags=["users"])
 app.include_router(health.router, prefix="/api/health", tags=["health"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(destinations.router, prefix="/api/destinations", tags=["destinations"])
@@ -45,8 +47,9 @@ app.include_router(itinerary.router, prefix="/api/itinerary", tags=["itinerary"]
 app.include_router(weather.router, prefix="/api/weather", tags=["weather"])
 app.include_router(logistics.router, prefix="/api/logistics", tags=["logistics"])
 app.include_router(orchestration.router, prefix="/api/orchestration", tags=["orchestration"])
+app.include_router(vacay.router, prefix="/api/vacay", tags=["vacay"])
 app.include_router(explore.router, prefix="/api", tags=["explore"])
-
+app.include_router(maps.router, prefix="/api/maps", tags=["maps"])
 
 @app.get("/")
 async def root():

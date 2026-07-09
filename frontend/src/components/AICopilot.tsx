@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useTripData } from '@/context/TripContext';
+import { usePathname } from 'next/navigation';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -18,12 +19,18 @@ export function AICopilot() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { tripData } = useTripData();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isOpen]);
+
+  // Hide Copilot completely on auth pages
+  if (pathname === "/login" || pathname === "/signup") {
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +45,7 @@ export function AICopilot() {
 
     try {
       // Pass the current trip context as part of the initial hidden prompt, or just the history
-      const response = await fetch('http://localhost:8000/api/chat/', {
+      const response = await fetch('http://127.0.0.1:8000/api/chat/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -90,7 +97,7 @@ export function AICopilot() {
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div 
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm
+                  className={`max-w-[85%] rounded-[24px] px-4 py-3 text-sm leading-relaxed shadow-sm
                     ${msg.role === 'user' 
                       ? 'bg-primary text-on-primary rounded-tr-sm' 
                       : 'bg-surface-container text-on-surface rounded-tl-sm border border-outline-variant/30'
@@ -102,7 +109,7 @@ export function AICopilot() {
             ))}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-surface-container text-on-surface rounded-2xl rounded-tl-sm px-4 py-3 border border-outline-variant/30 shadow-sm flex gap-1 items-center">
+                <div className="bg-surface-container text-on-surface rounded-[24px] rounded-tl-sm px-4 py-3 border border-outline-variant/30 shadow-sm flex gap-1 items-center">
                   <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: '0ms' }} />
                   <div className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '150ms' }} />
                   <div className="w-2 h-2 rounded-full bg-primary/80 animate-bounce" style={{ animationDelay: '300ms' }} />
@@ -139,9 +146,9 @@ export function AICopilot() {
       {/* Toggle Button */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className={`bg-primary text-on-primary w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95 ${isOpen ? 'rotate-90 scale-0 opacity-0 absolute' : 'rotate-0 scale-100 opacity-100'}`}
+        className={`bg-white/30 backdrop-blur-2xl border border-white/50 text-gray-900 w-16 h-16 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex items-center justify-center transition-all hover:bg-white/40 hover:scale-105 active:scale-95 hover:shadow-[0_8px_30px_rgb(0,0,0,0.2)] ${isOpen ? 'rotate-90 scale-0 opacity-0 absolute' : 'rotate-0 scale-100 opacity-100'}`}
       >
-        <span className="material-symbols-outlined text-3xl">auto_awesome</span>
+        <span className="material-symbols-outlined text-3xl text-primary">auto_awesome</span>
       </button>
     </div>
   );

@@ -102,7 +102,7 @@ export function Navbar() {
           mobileOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
         }`}
       >
-        <div className="glass-strong mx-4 mb-4 rounded-2xl p-4 space-y-1">
+        <div className="glass-strong mx-4 mb-4 rounded-[24px] p-4 space-y-1">
           {["Explore", "Plan Trip", "Collections"].map((item) => (
             <Link
               key={item}

@@ -3,23 +3,37 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTripData } from "@/context/TripContext";
+import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
-import CurrencyWidget from "@/components/CurrencyWidget";
-import HolidaysWidget from "@/components/HolidaysWidget";
+import InviteBuddyModal from "@/components/InviteBuddyModal";
+// TripCalendar removed since we use /vacation now
 
 export default function MyTripsDashboard() {
   const [trips, setTrips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [activeTrip, setActiveTrip] = useState<{ id: number; destination: string } | null>(null);
   const router = useRouter();
   const { setTripData } = useTripData();
+  const { token, isAuthenticated } = useAuth();
 
   useEffect(() => {
     async function fetchTrips() {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
       try {
-        const res = await fetch("http://localhost:8000/api/trips/");
+        const res = await fetch("http://127.0.0.1:8000/api/trips/", {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
         if (res.ok) {
           const data = await res.json();
           setTrips(data.data || []);
+        } else if (res.status === 401 || res.status === 403) {
+          router.push("/login");
         }
       } catch (err) {
         console.error("Error fetching trips:", err);
@@ -28,13 +42,19 @@ export default function MyTripsDashboard() {
       }
     }
     fetchTrips();
-  }, []);
+  }, [token, router]);
 
   const loadTrip = (trip: any) => {
     if (trip.trip_data) {
       setTripData(trip.trip_data);
       router.push("/itinerary");
     }
+  };
+
+  const openInviteModal = (e: React.MouseEvent, tripId: number, destination: string) => {
+    e.stopPropagation();
+    setActiveTrip({ id: tripId, destination });
+    setInviteModalOpen(true);
   };
 
   const colors = [
@@ -62,215 +82,247 @@ export default function MyTripsDashboard() {
 
   const estimatedKm = totalPlaces * 24;
 
+  if (!isAuthenticated && !loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <p className="text-xl font-bold mb-4">Please log in to view your trips.</p>
+        <Link href="/login" className="px-6 py-2 bg-primary text-white rounded-full">Login</Link>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-8 text-[#111827] pt-24 px-8 pb-12 max-w-[1400px] mx-auto">
-      {/* Top Stats Row */}
-      <div className="grid grid-cols-4 gap-6">
-        <div className="bg-[#1C1C1E] text-white rounded-[24px] p-6 shadow-sm flex flex-col justify-between h-40">
-          <div>
-            <div className="flex items-baseline gap-2">
-              <h2 className="text-5xl font-bold tracking-tight">{totalTrips}</h2>
-              <span className="text-gray-400 font-medium">trips planned</span>
-            </div>
-          </div>
-          <div className="flex -space-x-2">
-            <div className="w-8 h-8 rounded-full bg-red-600 border-2 border-[#1C1C1E] z-10 flex items-center justify-center text-[10px]">📍</div>
-            <div className="w-8 h-8 rounded-full bg-white border-2 border-[#1C1C1E] z-0 flex items-center justify-center text-[10px]">🌍</div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col justify-between h-40 relative overflow-hidden">
-          <div>
-            <h2 className="text-5xl font-bold tracking-tight text-gray-900">{totalPlaces}</h2>
-            <span className="text-gray-500 font-medium text-sm mt-1 block">places mapped</span>
-          </div>
-          <svg className="absolute bottom-4 right-4 w-16 h-8 text-gray-400" viewBox="0 0 100 40" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M0 30 L20 35 L40 20 L60 25 L80 10 L100 5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </div>
-
-        <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col justify-between h-40 relative overflow-hidden">
-          <div>
-            <div className="flex items-baseline gap-2">
-              <h2 className="text-5xl font-bold tracking-tight text-gray-900">{totalDays}</h2>
-              <span className="text-gray-500 font-medium text-lg">days</span>
-            </div>
-            <span className="text-gray-500 font-medium text-sm mt-1 block">across all trips</span>
-          </div>
-          <svg className="absolute bottom-4 right-4 w-20 h-8 text-gray-400" viewBox="0 0 100 40" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M0 35 L30 30 L60 25 L80 15 L100 10" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </div>
-
-        <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col justify-between h-40 relative overflow-hidden">
-          <div>
-            <div className="flex items-baseline gap-2">
-              <h2 className="text-5xl font-bold tracking-tight text-gray-900">{estimatedKm}</h2>
-              <span className="text-gray-500 font-medium text-lg">km</span>
-            </div>
-            <span className="text-gray-500 font-medium text-sm mt-1 block w-2/3 leading-tight">≈ {(estimatedKm / 40075).toFixed(4)}× around the equator</span>
-          </div>
-          <div className="absolute bottom-4 right-6 w-8 h-8 rounded-full border-2 border-gray-200 border-t-gray-400 transform -rotate-45"></div>
-        </div>
-      </div>
-
       {/* Main Content Split */}
       <div className="flex gap-10">
         
-        {/* Left Side: My Trips List */}
-        <div className="flex-1 flex flex-col gap-6">
+        {/* Left Side: Hero + Stats + Trips List */}
+        <div className="flex-1 flex flex-col gap-8">
+          
+          {/* AI Orchestration Hero Banner */}
+          <div className="relative rounded-[32px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.3)] hover:-translate-y-2 hover:shadow-[0_30px_60px_rgba(0,0,0,0.4)] transition-all duration-500 flex group min-h-[320px]">
+            {/* Background Image with Overlay */}
+            <div 
+              className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+              style={{ backgroundImage: "url('/images/valley_hero.jpg')" }}
+            ></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-gray-900/95 via-gray-900/70 to-transparent"></div>
+            
+            {/* Content */}
+            <div className="relative z-10 p-12 flex flex-col justify-center w-full max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white/90 text-[10px] font-bold tracking-widest uppercase w-max mb-6 shadow-sm">
+                <span className="material-symbols-outlined text-[14px] text-yellow-300">psychology</span>
+                Powered by Wandr AI
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold text-white mb-4 leading-tight tracking-tight">
+                Don't just plan. <br /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Orchestrate.</span>
+              </h2>
+              <p className="text-gray-300 text-sm md:text-base leading-relaxed mb-8 max-w-md">
+                Hand off the heavy lifting to your personal swarm of AI travel agents. We crunch flights, hotels, and itineraries in seconds.
+              </p>
+              <Link href="/" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-gray-900 rounded-full font-bold shadow-[0_0_40px_rgba(255,255,255,0.2)] hover:shadow-[0_0_60px_rgba(255,255,255,0.4)] transition-all hover:scale-105 active:scale-95 duration-200 w-max group/btn">
+                <span className="material-symbols-outlined text-[20px] group-hover/btn:rotate-12 transition-transform duration-300 text-primary">magic_button</span>
+                Generate Itinerary
+              </Link>
+            </div>
+
+            {/* Decorative Glass Cards on the right */}
+            <div className="absolute right-12 top-1/2 -translate-y-1/2 hidden lg:flex flex-col gap-5 pointer-events-none" style={{ perspective: "1000px" }}>
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-[24px] p-5 w-64 transform rotate-6 translate-x-8 shadow-2xl transition-transform duration-700 group-hover:rotate-12 group-hover:translate-x-4">
+                <div className="flex items-center justify-between text-white/90 mb-3">
+                  <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"><span className="material-symbols-outlined text-sm text-cyan-300">flight_takeoff</span> Flight Search</span>
+                  <span className="material-symbols-outlined text-sm text-green-400">check_circle</span>
+                </div>
+                <div className="h-1.5 bg-white/20 rounded-full w-3/4 mb-2"></div>
+                <div className="h-1.5 bg-white/20 rounded-full w-1/2"></div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-[24px] p-5 w-64 transform -rotate-3 -translate-x-4 shadow-2xl transition-transform duration-700 group-hover:-rotate-6 group-hover:-translate-x-8">
+                <div className="flex items-center justify-between text-white/90 mb-3">
+                  <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"><span className="material-symbols-outlined text-sm text-amber-300">hotel</span> Hotel Match</span>
+                  <span className="material-symbols-outlined text-sm text-green-400">check_circle</span>
+                </div>
+                <div className="h-1.5 bg-white/20 rounded-full w-full mb-2"></div>
+                <div className="h-1.5 bg-white/20 rounded-full w-2/3"></div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-[24px] p-5 w-64 transform rotate-2 translate-x-6 shadow-2xl transition-transform duration-700 group-hover:rotate-6 group-hover:translate-x-10">
+                <div className="flex items-center justify-between text-white/90 mb-3">
+                  <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"><span className="material-symbols-outlined text-sm text-purple-300">map</span> Smart Itinerary</span>
+                  <span className="material-symbols-outlined text-sm text-green-400">check_circle</span>
+                </div>
+                <div className="h-1.5 bg-white/20 rounded-full w-5/6 mb-2"></div>
+                <div className="h-1.5 bg-white/20 rounded-full w-4/6"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Top Stats Row (Moved here) */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-[#1C1C1E] text-white rounded-[24px] p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-40">
+              <div>
+                <div className="flex items-baseline gap-2">
+                  <h2 className="text-5xl font-bold tracking-tight">{totalTrips}</h2>
+                  <span className="text-gray-400 font-medium text-sm">trips planned</span>
+                </div>
+              </div>
+              <div className="flex -space-x-2">
+                <div className="w-8 h-8 rounded-full bg-red-600 border-2 border-[#1C1C1E] z-10 flex items-center justify-center text-[10px]">📍</div>
+                <div className="w-8 h-8 rounded-full bg-white border-2 border-[#1C1C1E] z-0 flex items-center justify-center text-[10px]">🌍</div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-[24px] p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-40 relative overflow-hidden">
+              <div>
+                <h2 className="text-5xl font-bold tracking-tight text-gray-900">{totalPlaces}</h2>
+                <span className="text-gray-500 font-medium text-sm mt-1 block">places mapped</span>
+              </div>
+              <svg className="absolute bottom-4 right-4 w-16 h-8 text-gray-400" viewBox="0 0 100 40" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M0 30 L20 35 L40 20 L60 25 L80 10 L100 5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+
+            <div className="bg-white rounded-[24px] p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-40 relative overflow-hidden">
+              <div>
+                <div className="flex items-baseline gap-2">
+                  <h2 className="text-5xl font-bold tracking-tight text-gray-900">{totalDays}</h2>
+                  <span className="text-gray-500 font-medium text-lg">days</span>
+                </div>
+                <span className="text-gray-500 font-medium text-sm mt-1 block">across all trips</span>
+              </div>
+              <svg className="absolute bottom-4 right-4 w-20 h-8 text-gray-400" viewBox="0 0 100 40" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M0 35 L30 30 L60 25 L80 15 L100 10" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+
+            <div className="bg-white rounded-[24px] p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-40 relative overflow-hidden">
+              <div>
+                <div className="flex items-baseline gap-2">
+                  <h2 className="text-5xl font-bold tracking-tight text-gray-900">{estimatedKm}</h2>
+                  <span className="text-gray-500 font-medium text-lg">km</span>
+                </div>
+                <span className="text-gray-500 font-medium text-[10px] mt-1 block w-2/3 leading-tight">≈ {(estimatedKm / 40075).toFixed(4)}× around equator</span>
+              </div>
+              <div className="absolute bottom-4 right-6 w-8 h-8 rounded-full border-2 border-gray-200 border-t-gray-400 transform -rotate-45"></div>
+            </div>
+          </div>
+
           {/* Header Row */}
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold tracking-tight text-gray-900">My Trips</h1>
             
             <div className="flex items-center gap-6">
-              <div className="flex bg-[#f9f9f9] border border-gray-200 rounded-full p-1 shadow-sm">
+              <div className="flex bg-[#f9f9f9] border border-gray-200 rounded-full p-1 shadow-sm hidden md:flex">
                 <button className="px-5 py-1.5 rounded-full bg-white text-gray-900 font-semibold text-sm shadow-sm">Planned</button>
                 <button className="px-5 py-1.5 rounded-full text-gray-500 hover:text-gray-900 font-semibold text-sm transition-colors">Archived</button>
                 <button className="px-5 py-1.5 rounded-full text-gray-500 hover:text-gray-900 font-semibold text-sm transition-colors">Completed</button>
               </div>
               <div className="flex items-center gap-3 text-gray-400">
-                <span className="material-symbols-outlined cursor-pointer hover:text-gray-900 transition-colors text-[20px]">calendar_today</span>
-                <span className="material-symbols-outlined cursor-pointer text-gray-900 text-[20px]">format_list_bulleted</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Grid of Trips */}
-          <div className="grid grid-cols-2 gap-6">
-            
-            {/* Real Trips from DB */}
-            {trips.map((trip, idx) => {
-              const bgGradient = colors[idx % colors.length];
-              const depDate = new Date(trip.departure_date);
-              const arrDate = new Date(trip.arrival_date);
-              const daysDiff = Math.max(1, Math.ceil((arrDate.getTime() - depDate.getTime()) / (1000 * 3600 * 24)));
-              
-              // Calculate days until trip
-              const daysUntil = Math.ceil((depDate.getTime() - new Date().getTime()) / (1000 * 3600 * 24));
-              const inDaysText = daysUntil > 0 ? `IN ${daysUntil} DAYS` : daysUntil === 0 ? "TODAY" : "PAST TRIP";
-
-              return (
-                <div 
-                  key={trip.id} 
-                  onClick={() => loadTrip(trip)}
-                  className="bg-white rounded-[24px] shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md transition-shadow group flex flex-col h-72"
+                <Link 
+                  href="/vacation"
+                  title="Vacation Planner"
+                  className="material-symbols-outlined transition-colors text-[20px] hover:text-gray-900"
                 >
-                  <div className={`flex-1 bg-gradient-to-br ${bgGradient} p-5 relative flex items-end`}>
-                    <div className="absolute top-4 left-4 bg-white/20 backdrop-blur-md rounded-full px-3 py-1 flex items-center gap-1.5 border border-white/20">
-                      <div className="w-1.5 h-1.5 rounded-full bg-yellow-300"></div>
-                      <span className="text-[10px] font-bold text-white tracking-widest">{inDaysText}</span>
-                    </div>
-                    <h3 className="text-3xl font-bold text-white leading-tight tracking-tight shadow-sm z-10 w-3/4">
-                      {trip.destination}
-                    </h3>
-                  </div>
-                  
-                  <div className="h-32 p-5 flex flex-col justify-between">
-                    <div className="flex items-center justify-center gap-4 text-xs font-semibold text-gray-500 border-b border-gray-100 pb-3">
-                      <span>{depDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                      <span className="material-symbols-outlined text-[14px] text-gray-300">arrow_forward</span>
-                      <span>{arrDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                    </div>
-                    <div className="flex justify-between text-center pt-2">
-                      <div>
-                        <p className="text-lg font-bold text-gray-900">{daysDiff}</p>
-                        <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">Days</p>
-                      </div>
-                      <div>
-                        <p className="text-lg font-bold text-gray-900">1</p>
-                        <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">Places</p>
-                      </div>
-                      <div>
-                        <p className="text-lg font-bold text-gray-900">{trip.adults}</p>
-                        <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">Buddy</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Empty "New Trip" Card */}
-            <Link href="/" className="rounded-[24px] border-2 border-dashed border-gray-300 flex flex-col items-center justify-center h-72 hover:border-gray-400 transition-colors group cursor-pointer bg-transparent">
-              <div className="w-12 h-12 bg-[#1C1C1E] rounded-full flex items-center justify-center text-white mb-4 shadow-sm group-hover:scale-105 transition-transform">
-                <span className="material-symbols-outlined text-xl">add</span>
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-1">New Trip</h3>
-              <p className="text-sm text-gray-500 font-medium">Plan a new trip from scratch</p>
-            </Link>
-
-          </div>
-        </div>
-
-        {/* Right Side: Widgets Column */}
-        <div className="w-80 flex flex-col gap-6">
-          
-          <CurrencyWidget />
-
-          <HolidaysWidget 
-            destination={trips[0]?.destination} 
-            startDate={trips[0]?.departure_date} 
-            endDate={trips[0]?.arrival_date} 
-          />
-
-          {/* Timezones Widget */}
-          <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
-            <div className="flex justify-between items-center mb-6 text-gray-500 text-xs font-bold tracking-widest">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[16px]">schedule</span>
-                TIMEZONES
-              </div>
-              <span className="material-symbols-outlined text-[16px] cursor-pointer hover:text-gray-900">add</span>
-            </div>
-
-            <div className="flex flex-col gap-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600">C</div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">Calcutta</p>
-                    <p className="text-[10px] font-semibold text-gray-400">GMT+5:30</p>
-                  </div>
-                </div>
-                <p className="text-xl font-bold text-gray-900">16:28</p>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600">L</div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">London</p>
-                    <p className="text-[10px] font-semibold text-gray-400">GMT+1</p>
-                  </div>
-                </div>
-                <p className="text-xl font-bold text-gray-900">11:58</p>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600">T</div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">Tokyo</p>
-                    <p className="text-[10px] font-semibold text-gray-400">GMT+9</p>
-                  </div>
-                </div>
-                <p className="text-xl font-bold text-gray-900">19:58</p>
+                  calendar_today
+                </Link>
+                <button 
+                  className="material-symbols-outlined transition-colors text-[20px] text-primary"
+                >
+                  format_list_bulleted
+                </button>
               </div>
             </div>
           </div>
 
+          {/* Main View Area (List) */}
+          <div className="grid grid-cols-2 gap-6">
+              
+              {/* Real Trips from DB */}
+              {trips.map((trip, idx) => {
+                const bgGradient = colors[idx % colors.length];
+                const depDate = new Date(trip.departure_date);
+                const arrDate = new Date(trip.arrival_date);
+                const daysDiff = Math.max(1, Math.ceil((arrDate.getTime() - depDate.getTime()) / (1000 * 3600 * 24)));
+                
+                // Calculate days until trip
+                const daysUntil = Math.ceil((depDate.getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+                const inDaysText = daysUntil > 0 ? `IN ${daysUntil} DAYS` : daysUntil === 0 ? "TODAY" : "PAST TRIP";
+
+                return (
+                  <div 
+                    key={trip.id} 
+                    onClick={() => loadTrip(trip)}
+                    className="bg-white rounded-[24px] shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md transition-all duration-300 hover:-translate-y-1 group flex flex-col h-72"
+                  >
+                    <div className={`flex-1 bg-gradient-to-br ${bgGradient} p-5 relative flex items-end`}>
+                      <div className="absolute top-4 left-4 bg-white/20 backdrop-blur-md rounded-full px-3 py-1 flex items-center gap-1.5 border border-white/20">
+                        <div className="w-1.5 h-1.5 rounded-full bg-yellow-300"></div>
+                        <span className="text-[10px] font-bold text-white tracking-widest">{inDaysText}</span>
+                      </div>
+                      
+                      {/* Share / Add Buddy Button */}
+                      <button 
+                        onClick={(e) => openInviteModal(e, trip.id, trip.destination)}
+                        className="absolute top-4 right-4 w-10 h-10 bg-white/20 backdrop-blur-md hover:bg-white/40 border border-white/30 rounded-full flex items-center justify-center transition-colors text-white shadow-sm z-20"
+                        title="Invite Buddy"
+                      >
+                        <span className="material-symbols-outlined text-[20px]">person_add</span>
+                      </button>
+
+                      <h3 className="text-3xl font-bold text-white leading-tight tracking-tight shadow-sm z-10 w-3/4">
+                        {trip.destination}
+                      </h3>
+                    </div>
+                    
+                    <div className="h-32 p-5 flex flex-col justify-between">
+                      <div className="flex items-center justify-center gap-4 text-xs font-semibold text-gray-500 border-b border-gray-100 pb-3">
+                        <span>{depDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                        <span className="material-symbols-outlined text-[14px] text-gray-300">arrow_forward</span>
+                        <span>{arrDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                      </div>
+                      <div className="flex justify-between text-center pt-2">
+                        <div>
+                          <p className="text-lg font-bold text-gray-900">{daysDiff}</p>
+                          <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">Days</p>
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-gray-900">1</p>
+                          <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">Places</p>
+                        </div>
+                        <div 
+                          className="group/buddy cursor-pointer hover:bg-gray-50 rounded-lg -m-2 p-2 transition-colors relative"
+                          onClick={(e) => openInviteModal(e, trip.id, trip.destination)}
+                          title="Add Buddy"
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <p className="text-lg font-bold text-gray-900 group-hover/buddy:text-primary transition-colors">{trip.adults}</p>
+                            <span className="material-symbols-outlined text-[16px] text-gray-400 opacity-0 group-hover/buddy:opacity-100 group-hover/buddy:text-primary transition-all -ml-2 group-hover/buddy:ml-0">add</span>
+                          </div>
+                          <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase group-hover/buddy:text-primary transition-colors">Buddy</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
         </div>
       </div>
       
       {/* Floating New Trip Button */}
       <div className="fixed bottom-8 right-32 z-50">
-        <Link href="/" className="bg-[#1C1C1E] text-white px-6 py-4 rounded-full font-bold shadow-xl flex items-center gap-2 hover:bg-black transition-colors hover:scale-105 active:scale-95 duration-200">
-          <span className="material-symbols-outlined text-[18px]">add</span>
+        <Link href="/" className="bg-white/30 backdrop-blur-2xl border border-white/50 text-gray-900 px-6 py-4 rounded-full font-bold shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex items-center gap-2 hover:bg-white/40 transition-all hover:scale-105 active:scale-95 duration-200 hover:shadow-[0_8px_30px_rgb(0,0,0,0.2)]">
+          <span className="material-symbols-outlined text-[18px] text-primary">add</span>
           New Trip
         </Link>
       </div>
 
+      {activeTrip && (
+        <InviteBuddyModal 
+          tripId={activeTrip.id} 
+          destination={activeTrip.destination} 
+          isOpen={inviteModalOpen} 
+          onClose={() => setInviteModalOpen(false)} 
+        />
+      )}
     </div>
   );
 }

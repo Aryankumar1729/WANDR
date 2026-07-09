@@ -27,7 +27,7 @@ export default function HolidaysWidget({ destination, startDate, endDate }: { de
   }, [destination, startDate, endDate]);
 
   return (
-    <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
+    <div className="bg-white rounded-[24px] p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 border border-gray-100">
       <div className="flex justify-between items-center mb-6 text-gray-500 text-xs font-bold tracking-widest">
         <div className="flex items-center gap-2">
           <span className="material-symbols-outlined text-[16px]">celebration</span>

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, ReactNode } from "react";
 
 interface TripData {
   origin: string;
@@ -15,6 +15,8 @@ interface TripData {
   itinerary: any;
   packing: any;
   budgetResult: any;
+  participants: any[];
+  expenses: any[];
   mapMarkers: any[];
   mapCenter: { lat: number; lng: number };
 }
@@ -37,6 +39,8 @@ const defaultTrip: TripData = {
   itinerary: null,
   packing: null,
   budgetResult: null,
+  participants: [],
+  expenses: [],
   mapMarkers: [],
   mapCenter: { lat: 19.076, lng: 72.8777 },
 };
@@ -49,12 +53,20 @@ const TripContext = createContext<TripContextType>({
 export function TripProvider({ children }: { children: ReactNode }) {
   const [tripData, setTripDataState] = useState<TripData>(defaultTrip);
 
-  const setTripData = (data: Partial<TripData>) => {
+  const setTripData = useCallback((data: Partial<TripData>) => {
     setTripDataState((prev) => ({ ...prev, ...data }));
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      tripData,
+      setTripData,
+    }),
+    [tripData, setTripData],
+  );
 
   return (
-    <TripContext.Provider value={{ tripData, setTripData }}>
+    <TripContext.Provider value={value}>
       {children}
     </TripContext.Provider>
   );

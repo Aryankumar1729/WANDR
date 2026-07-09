@@ -29,7 +29,7 @@ class OrchestratorAgent(ADKAgent):
         payload_str = json.dumps(request_payload, sort_keys=True)
         return hashlib.md5(payload_str.encode()).hexdigest()
 
-    async def stream_plan(self, request_payload: dict) -> AsyncGenerator[str, None]:
+    async def stream_plan(self, request_payload: dict, user_id: int = None) -> AsyncGenerator[str, None]:
         yield f"data: {json.dumps({'event': 'orchestrator_started', 'message': 'Starting multi-agent orchestration'})}\n\n"
         
         cache_key = self._generate_cache_key(request_payload)
@@ -120,12 +120,13 @@ class OrchestratorAgent(ADKAgent):
                     try:
                         d1 = datetime.strptime(request_payload.get("date", ""), "%Y-%m-%d")
                         import datetime as dt
-                        d2 = d1 + dt.timedelta(days=int(request_payload.get("duration", 2)))
+                        d2 = d1 + dt.timedelta(days=max(0, int(request_payload.get("duration", 2)) - 1))
                         arrival_date_str = d2.strftime("%Y-%m-%d")
                     except Exception:
                         pass
                         
                     db_trip = TripRecord(
+                        owner_id=user_id,
                         origin=request_payload.get("origin", ""),
                         destination=request_payload.get("destination", ""),
                         departure_date=request_payload.get("date", ""),
