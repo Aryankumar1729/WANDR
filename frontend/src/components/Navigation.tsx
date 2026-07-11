@@ -99,7 +99,7 @@ export function TopNav() {
 
             <div className="relative flex items-center gap-2 ml-2">
               <Show when="signed-out">
-                <SignInButton mode="modal" forceRedirectUrl="/trips">
+                <SignInButton mode="modal" forceRedirectUrl="/trips" fallbackRedirectUrl="/trips" signUpForceRedirectUrl="/trips" signUpFallbackRedirectUrl="/trips">
                   <button className="px-4 py-1.5 bg-black text-white text-sm font-bold rounded-full hover:bg-gray-800 transition-colors">
                     Login
                   </button>
@@ -203,7 +203,7 @@ export function TopNav() {
 
             <div className="relative flex items-center gap-2 ml-2">
               <Show when="signed-out">
-                <SignInButton mode="modal" forceRedirectUrl="/trips">
+                <SignInButton mode="modal" forceRedirectUrl="/trips" fallbackRedirectUrl="/trips" signUpForceRedirectUrl="/trips" signUpFallbackRedirectUrl="/trips">
                   <button className="px-4 py-1.5 bg-black text-white text-sm font-bold rounded-full hover:bg-gray-800 transition-colors">
                     Login
                   </button>
