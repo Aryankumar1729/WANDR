@@ -114,7 +114,7 @@ body {
   .preserve-3d {
     transform-style: preserve-3d;
   }
-  .translate-z-[-20px] {
+  .translate-z-\[-20px\] {
     transform: translateZ(-20px);
   }
 }

@@ -1,12 +1,13 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useAuth as useClerkAuth, useUser } from "@clerk/nextjs";
 
 interface User {
-  id: number;
-  email: string;
-  name: string;
+  id?: string;
+  email?: string;
+  name?: string;
 }
 
 interface AuthContextType {
@@ -20,53 +21,32 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const { getToken, isLoaded, isSignedIn, signOut } = useClerkAuth();
+  const { user: clerkUser } = useUser();
   const [token, setToken] = useState<string | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
-  const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
-    setIsMounted(true);
-    const storedToken = localStorage.getItem("token");
-    const storedUser = localStorage.getItem("user");
-    
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+    if (isSignedIn) {
+      getToken().then(setToken);
+    } else {
+      setToken(null);
     }
-  }, []);
+  }, [isSignedIn, getToken]);
 
-  useEffect(() => {
-    if (!isMounted) return;
-    const publicRoutes = ["/", "/login", "/signup", "/register"];
-    const hasToken = localStorage.getItem("token") || token;
-    
-    if (!hasToken && !publicRoutes.includes(pathname)) {
-      router.push("/login");
-    }
-  }, [token, pathname, isMounted, router]);
-
-  const login = (newToken: string, newUser: User) => {
-    setToken(newToken);
-    setUser(newUser);
-    localStorage.setItem("token", newToken);
-    localStorage.setItem("user", JSON.stringify(newUser));
-    router.push("/trips"); // Redirect to My Trips
-  };
-
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    router.push("/login");
-  };
-
-  if (!isMounted) return null; // Avoid hydration mismatch
+  const user = clerkUser ? {
+    id: clerkUser.id,
+    email: clerkUser.primaryEmailAddress?.emailAddress,
+    name: clerkUser.fullName || "",
+  } : null;
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!token }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      token, 
+      login: () => {}, 
+      logout: () => signOut(), 
+      isAuthenticated: !!isSignedIn 
+    }}>
       {children}
     </AuthContext.Provider>
   );

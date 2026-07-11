@@ -16,9 +16,11 @@ def send_email(to_email: str, subject: str, body: str):
         "Content-Type": "application/json"
     }
 
+    resend_from = os.getenv("RESEND_FROM_EMAIL", "Wandr Travel <onboarding@resend.dev>")
+
     # Resend provides a free testing domain for sending emails
     payload = {
-        "from": "Wandr Travel <onboarding@resend.dev>",
+        "from": resend_from,
         "to": [to_email],
         "subject": subject,
         "html": body

@@ -31,9 +31,6 @@ class Settings(BaseSettings):
     smtp_username: str = Field(default="", alias="GMAIL_USER")
     smtp_password: str = Field(default="", alias="GMAIL_APP_PASSWORD")
     
-    # JWT Auth
-    secret_key: str = Field(default="super-secret-key-change-in-prod", alias="SECRET_KEY")
-    access_token_expire_minutes: int = Field(default=60 * 24 * 7, alias="ACCESS_TOKEN_EXPIRE_MINUTES") # 1 week
 
     # CORS
     frontend_url: str = Field(default="http://localhost:3000", alias="FRONTEND_URL")

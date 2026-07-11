@@ -3,15 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTripData } from "@/context/TripContext";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth as useCustomAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { SignInButton, Show, UserButton } from "@clerk/nextjs";
 
 export function TopNav() {
   const pathname = usePathname();
   const { tripData } = useTripData();
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const { user, logout, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useCustomAuth(); // Note: This will be replaced by Clerk later
   const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
@@ -96,56 +97,25 @@ export function TopNav() {
               notifications
             </button>
 
-            <div className="relative">
-              {!isAuthenticated ? (
-                <button onClick={() => window.location.assign("/login")} className="px-4 py-1.5 bg-black text-white text-sm font-bold rounded-full hover:bg-gray-800 transition-colors">
-                  Login
-                </button>
-              ) : (
-                <div 
-                  className="flex items-center gap-2 ml-2 cursor-pointer group"
-                  onClick={() => setProfileOpen(!profileOpen)}
-                >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-orange-400 text-white flex items-center justify-center text-xs font-bold shadow-sm">
-                    {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
-                  </div>
-                  <span className="text-sm font-semibold text-gray-700 group-hover:text-black hidden sm:block">
-                    {user?.name || "User"}
-                  </span>
-                  <span className="material-symbols-outlined text-[18px]">
-                    expand_more
-                  </span>
-                </div>
-              )}
-
-              {/* Dropdown */}
-              {profileOpen && isAuthenticated && (
-                <div className="absolute right-0 mt-3 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-fade-in origin-top-right">
-                  <div className="px-4 py-3 border-b border-gray-100">
-                    <p className="text-sm font-bold text-gray-900 truncate">{user?.name}</p>
-                    <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                  </div>
-                  <div className="py-1">
-                    <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[18px]">person</span>
-                      My Profile
-                    </button>
-                    <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[18px]">settings</span>
-                      Settings
-                    </button>
-                  </div>
-                  <div className="py-1 border-t border-gray-100">
-                    <button 
-                      onClick={() => { setProfileOpen(false); logout(); }}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-semibold"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">logout</span>
-                      Log out
-                    </button>
-                  </div>
-                </div>
-              )}
+            <div className="relative flex items-center gap-2 ml-2">
+              <Show when="signed-out">
+                <SignInButton mode="modal" forceRedirectUrl="/trips">
+                  <button className="px-4 py-1.5 bg-black text-white text-sm font-bold rounded-full hover:bg-gray-800 transition-colors">
+                    Login
+                  </button>
+                </SignInButton>
+              </Show>
+              <Show when="signed-in">
+                <UserButton afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "w-8 h-8" } }}>
+                  <UserButton.MenuItems>
+                    <UserButton.Link
+                      label="About"
+                      labelIcon={<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>}
+                      href="/"
+                    />
+                  </UserButton.MenuItems>
+                </UserButton>
+              </Show>
             </div>
 
           </div>
@@ -231,56 +201,25 @@ export function TopNav() {
           notifications
         </button>
 
-            <div className="relative">
-              {!isAuthenticated ? (
-                <button onClick={() => window.location.assign("/login")} className="px-4 py-1.5 bg-black text-white text-sm font-bold rounded-full hover:bg-gray-800 transition-colors">
-                  Login
-                </button>
-              ) : (
-                <div 
-                  className="flex items-center gap-2 ml-2 cursor-pointer group"
-                  onClick={() => setProfileOpen(!profileOpen)}
-                >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-orange-400 text-white flex items-center justify-center text-xs font-bold shadow-sm">
-                    {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
-                  </div>
-                  <span className="text-sm font-semibold text-gray-700 group-hover:text-black hidden sm:block">
-                    {user?.name || "User"}
-                  </span>
-                  <span className="material-symbols-outlined text-[18px]">
-                    expand_more
-                  </span>
-                </div>
-              )}
-
-              {/* Dropdown */}
-              {profileOpen && isAuthenticated && (
-                <div className="absolute right-0 mt-3 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-fade-in origin-top-right">
-                  <div className="px-4 py-3 border-b border-gray-100">
-                    <p className="text-sm font-bold text-gray-900 truncate">{user?.name}</p>
-                    <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                  </div>
-                  <div className="py-1">
-                    <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[18px]">person</span>
-                      My Profile
-                    </button>
-                    <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[18px]">settings</span>
-                      Settings
-                    </button>
-                  </div>
-                  <div className="py-1 border-t border-gray-100">
-                    <button 
-                      onClick={() => { setProfileOpen(false); logout(); }}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-semibold"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">logout</span>
-                      Log out
-                    </button>
-                  </div>
-                </div>
-              )}
+            <div className="relative flex items-center gap-2 ml-2">
+              <Show when="signed-out">
+                <SignInButton mode="modal" forceRedirectUrl="/trips">
+                  <button className="px-4 py-1.5 bg-black text-white text-sm font-bold rounded-full hover:bg-gray-800 transition-colors">
+                    Login
+                  </button>
+                </SignInButton>
+              </Show>
+              <Show when="signed-in">
+                <UserButton afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "w-8 h-8" } }}>
+                  <UserButton.MenuItems>
+                    <UserButton.Link
+                      label="About"
+                      labelIcon={<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>}
+                      href="/"
+                    />
+                  </UserButton.MenuItems>
+                </UserButton>
+              </Show>
             </div>
 
       </div>

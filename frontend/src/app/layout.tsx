@@ -3,6 +3,7 @@ import { TopNav } from "@/components/Navigation";
 import { TripProvider } from "@/context/TripContext";
 import { AuthProvider } from "@/context/AuthContext";
 import "./globals.css";
+import { ClerkProvider } from "@clerk/nextjs";
 
 import { AICopilot } from "@/components/AICopilot";
 
@@ -25,17 +26,19 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
       </head>
       <body className="text-on-surface antialiased bg-background overflow-x-hidden" suppressHydrationWarning>
-        <Toaster position="bottom-right" toastOptions={{ style: { borderRadius: '12px', background: '#333', color: '#fff' } }} />
-        <AuthProvider>
-          <TripProvider>
-            <TopNav />
-            {/* Main Content */}
-            <main className="min-h-screen">
-              {children}
-            </main>
-            <AICopilot />
-          </TripProvider>
-        </AuthProvider>
+        <ClerkProvider>
+          <Toaster position="bottom-right" toastOptions={{ style: { borderRadius: '12px', background: '#333', color: '#fff' } }} />
+          <AuthProvider>
+            <TripProvider>
+              <TopNav />
+              {/* Main Content */}
+              <main className="min-h-screen">
+                {children}
+              </main>
+              <AICopilot />
+            </TripProvider>
+          </AuthProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

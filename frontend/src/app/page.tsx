@@ -1,8 +1,10 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useAuth } from "@clerk/nextjs";
 
 export default function AboutPage() {
+  const { isSignedIn } = useAuth();
   const [typedText, setTypedText] = useState("");
   const fullText = "Plan a 3-day trip from Delhi to Bali next week for a couple, budget 50000...";
   
@@ -37,6 +39,11 @@ export default function AboutPage() {
             Wandr is an intelligent multi-agent AI system. We don't just give you a list of links—we autonomously research flights, verify hotel ratings, check the weather, and weave it all into a perfect daily itinerary.
           </p>
           <div className="flex gap-4 justify-center">
+            {isSignedIn && (
+              <Link href="/trips" className="px-8 py-4 bg-white text-[#E67E22] border-2 border-[#E67E22] font-bold rounded-full text-lg shadow-[0_8px_20px_rgba(230,126,34,0.1)] hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(230,126,34,0.2)] transition-all flex items-center gap-2">
+                <span className="material-symbols-outlined">arrow_back</span> Back to My Trips
+              </Link>
+            )}
             <Link href="/plan" className="px-8 py-4 bg-[#E67E22] text-white font-bold rounded-full text-lg shadow-[0_8px_20px_rgba(230,126,34,0.3)] hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(230,126,34,0.4)] transition-all flex items-center gap-2">
               Start Planning Now <span className="material-symbols-outlined">arrow_forward</span>
             </Link>
