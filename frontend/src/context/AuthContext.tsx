@@ -26,11 +26,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
+    let interval: NodeJS.Timeout;
     if (isSignedIn) {
       getToken().then(setToken);
+      interval = setInterval(() => {
+        getToken().then(setToken);
+      }, 30000); // refresh token every 30 seconds
     } else {
       setToken(null);
     }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [isSignedIn, getToken]);
 
   const user = clerkUser ? {
