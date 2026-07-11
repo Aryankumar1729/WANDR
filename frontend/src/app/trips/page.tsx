@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTripData } from "@/context/TripContext";
 import { useAuth } from "@/context/AuthContext";
+import { SignInButton } from "@clerk/nextjs";
 import Link from "next/link";
 import InviteBuddyModal from "@/components/InviteBuddyModal";
 // TripCalendar removed since we use /vacation now
@@ -33,7 +34,7 @@ export default function MyTripsDashboard() {
           const data = await res.json();
           setTrips(data.data || []);
         } else if (res.status === 401 || res.status === 403) {
-          router.push("/login");
+          router.push("/");
         }
       } catch (err) {
         console.error("Error fetching trips:", err);
@@ -86,7 +87,9 @@ export default function MyTripsDashboard() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <p className="text-xl font-bold mb-4">Please log in to view your trips.</p>
-        <Link href="/login" className="px-6 py-2 bg-primary text-white rounded-full">Login</Link>
+        <SignInButton mode="modal" forceRedirectUrl="/trips">
+          <button className="px-6 py-2 bg-primary text-white rounded-full">Login</button>
+        </SignInButton>
       </div>
     );
   }

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { SignInButton } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import VacayCalendar from "@/components/VacayCalendar";
 import Link from "next/link";
@@ -101,7 +102,9 @@ export default function VacayPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <p className="text-xl font-bold mb-4">Please log in to manage your team's vacation days.</p>
-        <Link href="/login" className="px-6 py-2 bg-primary text-white rounded-full">Login</Link>
+        <SignInButton mode="modal" forceRedirectUrl="/vacation">
+          <button className="px-6 py-2 bg-primary text-white rounded-full">Login</button>
+        </SignInButton>
       </div>
     );
   }
