@@ -150,6 +150,13 @@ class OrchestratorAgent(ADKAgent):
                     )
                     session.add(db_trip)
                     await session.commit()
+                    await session.refresh(db_trip)
+                    
+                    if user_id:
+                        from app.db.models import TripMember
+                        member = TripMember(trip_id=db_trip.id, user_id=user_id, role="admin")
+                        session.add(member)
+                        await session.commit()
             except Exception as e:
                 print(f"Failed to auto-save trip: {e}")
             
